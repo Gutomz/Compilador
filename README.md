@@ -1,5 +1,5 @@
-# FR Proteses
-Desktop app to manage orders.
+# Compiladores
+Projeto de compiladores realizado por Augusto Zambello e José Victor Pires.
 
 **Install Dependencies:**\
   `npm install`
