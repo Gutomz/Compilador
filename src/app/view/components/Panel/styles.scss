@@ -1,0 +1,10 @@
+.panel {
+  &__layout {
+    min-height: 100vh;
+  }
+
+  &__sider {
+    height: 100vh;
+    background-color: white;
+  }
+}
