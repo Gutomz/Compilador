@@ -8,3 +8,23 @@ html, body {
 *{
   font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
+
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: @background-color;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: @gray;
+    border-radius: 5px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: @dark-gray; 
+  }
+}

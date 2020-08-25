@@ -1,10 +1,12 @@
 import React from 'react';
 
-import { Input, Button, Statistic, notification } from 'antd';
+import { Input, Button, Statistic, notification, Layout, Row, Col } from 'antd';
 
 const app = window.require('electron').remote;
 const fs = app.require('fs');
 const { dialog } = app;
+
+const { Sider, Content, Footer } = Layout;
 
 class VM extends React.Component {
   constructor(props) {
@@ -25,7 +27,7 @@ class VM extends React.Component {
     if (file.canceled || file.filePaths.length === 0) {
       console.log('Error ao carregar o arquivo');
       notification.error({
-        message: 'Error ao carregar o arquivo',
+        message: 'Erro ao carregar o arquivo',
         placement: 'topRight',
       });
       return;
@@ -45,49 +47,69 @@ class VM extends React.Component {
     const { data } = this.state;
 
     return (
-      <div className="vm">
-        <div className="vm__inner-view vm__inner-view--first">
-          <div className="vm__console-view">
-            <div className="vm__console-view__inner" />
-          </div>
-          <div className="vm__input-view">
-            <Input className="vm__input-view__input" />
-            <div className="vm__input-view__button">
-              <Button>RUN</Button>
-              <Button className="vm__input-view__button--margin-left">
-                DEBUG
-              </Button>
-            </div>
-          </div>
-        </div>
-        <div className="vm__inner-view vm__inner-view--second">
-          <div className="vm__code-view">
-            <div className="vm__code-view__inner">
-              {data.map((line) => (
-                <p className="vm__code-view__inner__text">{line}</p>
-              ))}
-            </div>
-          </div>
-          <div className="vm__input-view">
-            <Button onClick={() => this.onLoadFilePress()}>
-              Carregar Arquivo
-            </Button>
-            <div className="vm__input-view__button">
-              <Statistic
-                title="Registrador de Programa"
-                value={0}
-                precision={0}
-              />
-              <Statistic
-                className="vm__input-view__button--margin-left"
-                title="Topo da Pilha"
-                value={0}
-                precision={0}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <Layout>
+        <Content className="vm">
+          <Layout className="vm">
+            <Content className="vm__content">
+              <Row className="vm__content--inner" justify="space-between">
+                <Col
+                  span={12}
+                  className="vm__content--inner vm__content--inner--left"
+                >
+                  <Col className="console custom-scrollbar">
+                    <p>Console</p>
+                  </Col>
+                </Col>
+                <Col
+                  span={12}
+                  className="vm__content--inner vm__content--inner--right"
+                >
+                  <Col className="code custom-scrollbar">
+                    {data.map((line) => (
+                      <p className="code__text">{line}</p>
+                    ))}
+                  </Col>
+                </Col>
+              </Row>
+            </Content>
+            <Footer className="vm__footer">
+              <Row align="middle">
+                <Col span={12} className="vm__content--inner--left">
+                  <Row>
+                    <Col flex={1}>
+                      <Input />
+                    </Col>
+                    <Button>RUN</Button>
+                    <Button>DEBUG</Button>
+                  </Row>
+                </Col>
+                <Col span={12} className="vm__content--inner--right">
+                  <Row align="middle" justify="space-between">
+                    <Button onClick={() => this.onLoadFilePress()}>
+                      Carregar Arquivo
+                    </Button>
+                    <Col span={16}>
+                      <Row justify="space-between">
+                        <Statistic
+                          title="Registrador de Programa"
+                          value={0}
+                          precision={0}
+                        />
+                        <Statistic
+                          title="Topo da Pilha"
+                          value={0}
+                          precision={0}
+                        />
+                      </Row>
+                    </Col>
+                  </Row>
+                </Col>
+              </Row>
+            </Footer>
+          </Layout>
+        </Content>
+        <Sider style={{ height: '100vh' }} />
+      </Layout>
     );
   }
 }
