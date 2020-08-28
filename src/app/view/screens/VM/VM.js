@@ -1,10 +1,6 @@
 import React from 'react';
-
 import { Input, Button, Statistic, notification, Layout, Row, Col } from 'antd';
-
-const app = window.require('electron').remote;
-const fs = app.require('fs');
-const { dialog } = app;
+import { openFile } from '../../../Services/FileSystem';
 
 const { Sider, Content, Footer } = Layout;
 
@@ -17,29 +13,15 @@ class VM extends React.Component {
     };
   }
 
-  onLoadFilePress = async () => {
-    const file = await dialog.showOpenDialog({
-      title: 'Selecionar Arquivo',
-      buttonLabel: 'Selecionar',
-      filters: [{ name: 'Arquivo Texto .txt', extensions: ['txt'] }],
-    });
-
-    if (file.canceled || file.filePaths.length === 0) {
-      console.log('Error ao carregar o arquivo');
-      notification.error({
-        message: 'Erro ao carregar o arquivo',
-        placement: 'topRight',
-      });
-      return;
-    }
-
-    fs.readFile(file.filePaths[0], 'utf8', (err, data) => {
+  onLoadFilePress = () => {
+    openFile((err, data) => {
       if (err) {
-        console.log('Error ao carregar o arquivo');
-        return;
+        return notification.error({
+          message: err,
+          placement: 'topRight',
+        });
       }
-      this.setState({ data: data.split('\n') });
-      console.log(data.split('\n'));
+      return this.setState({ data: data.split('\n') });
     });
   };
 
@@ -51,7 +33,7 @@ class VM extends React.Component {
         <Content className="vm">
           <Layout className="vm">
             <Content className="vm__content">
-              <Row className="vm__content--inner" justify="space-between">
+              <Row className="vm__content--inner">
                 <Col
                   span={12}
                   className="vm__content--inner vm__content--inner--left"
@@ -74,7 +56,7 @@ class VM extends React.Component {
             </Content>
             <Footer className="vm__footer">
               <Row align="middle">
-                <Col span={12} className="vm__content--inner--left">
+                <Col span={12} className="vm__footer--inner--left">
                   <Row>
                     <Col flex={1}>
                       <Input />
@@ -83,7 +65,7 @@ class VM extends React.Component {
                     <Button>DEBUG</Button>
                   </Row>
                 </Col>
-                <Col span={12} className="vm__content--inner--right">
+                <Col span={12} className="vm__footer--inner--right">
                   <Row align="middle" justify="space-between">
                     <Button onClick={() => this.onLoadFilePress()}>
                       Carregar Arquivo
@@ -108,7 +90,7 @@ class VM extends React.Component {
             </Footer>
           </Layout>
         </Content>
-        <Sider style={{ height: '100vh' }} />
+        <Sider className="vm__sider" />
       </Layout>
     );
   }
