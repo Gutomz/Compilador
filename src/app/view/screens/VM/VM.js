@@ -1,19 +1,16 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { Input, Button, Statistic, notification, Layout, Row, Col } from 'antd';
 import { openFile } from '../../../Services/FileSystem';
+import { VMSelectors } from '../../../redux/reducers';
+import { VMAction } from '../../../redux/actions';
 
 const { Sider, Content, Footer } = Layout;
 
-class VM extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      data: [],
-    };
-  }
-
+class VM extends React.PureComponent {
   onLoadFilePress = () => {
+    const { saveFile } = this.props;
+
     openFile((err, data) => {
       if (err) {
         return notification.error({
@@ -21,12 +18,12 @@ class VM extends React.Component {
           placement: 'topRight',
         });
       }
-      return this.setState({ data: data.split('\n') });
+      return saveFile(data.split('\n'));
     });
   };
 
   render() {
-    const { data } = this.state;
+    const { file } = this.props;
 
     return (
       <Layout>
@@ -47,7 +44,7 @@ class VM extends React.Component {
                   className="vm__content--inner vm__content--inner--right"
                 >
                   <Col className="code custom-scrollbar">
-                    {data.map((line) => (
+                    {file.map((line) => (
                       <p className="code__text">{line}</p>
                     ))}
                   </Col>
@@ -96,4 +93,12 @@ class VM extends React.Component {
   }
 }
 
-export default VM;
+const mapStateToProps = (state) => ({
+  file: VMSelectors.getFile(state),
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  saveFile: (file) => dispatch(VMAction.saveFile(file)),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(VM);
