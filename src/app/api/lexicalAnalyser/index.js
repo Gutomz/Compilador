@@ -17,7 +17,43 @@ export default class LexicalAnalyser {
   }
 
   removeUselessData() {
-    return this.error;
+    const { file, eof } = this;
+    while (
+      this.index !== eof &&
+      (file[this.index] === '{' || file[this.index] === '/')
+    ) {
+      if (file[this.index] === '{') {
+        do {
+          this.index += 1;
+        } while (this.index !== eof && file[this.index] !== '}');
+        this.index += 1;
+      }
+
+      if (this.index !== eof && file[this.index] === '/') {
+        this.index += 1;
+        if (this.index !== eof && file[this.index] === '*') {
+          this.index += 1;
+          let endComment = false;
+          do {
+            if (file[this.index] === '*') {
+              this.index += 1;
+              if (file[this.index] === '/') {
+                endComment = true;
+              }
+            }
+            this.index += 1;
+          } while (this.index !== eof && !endComment);
+        } else {
+          return {};
+        }
+      }
+
+      while (this.index !== eof && file[this.index] === ' ') {
+        this.index += 1;
+      }
+    }
+
+    return null;
   }
 
   treatDigit() {
@@ -29,6 +65,10 @@ export default class LexicalAnalyser {
   }
 
   treatAssignment() {
+    return this.error;
+  }
+
+  treatArithmeticOperator() {
     return this.error;
   }
 
@@ -86,7 +126,12 @@ export default class LexicalAnalyser {
 
   init() {
     while (this.index < this.eof) {
-      this.removeUselessData();
+      const uselessDataError = this.removeUselessData();
+      if (uselessDataError) {
+        this.error = uselessDataError;
+        break;
+      }
+
       if (this.index < this.eof) {
         const { token, error } = this.getToken();
 
@@ -103,6 +148,7 @@ export default class LexicalAnalyser {
     console.group('File');
     console.log(this.file);
     console.groupEnd();
+    console.log('index', this.index);
     console.log('Tokens', this.tokens);
     console.log('Error', this.error);
     console.groupEnd();
