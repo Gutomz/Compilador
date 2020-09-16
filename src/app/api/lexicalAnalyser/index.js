@@ -11,7 +11,7 @@ export default class LexicalAnalyser {
     this.letters = /^[A-Za-z]+$/;
     this.digits = /^\d+$/;
     this.assignment = /[:]/;
-    this.arithmeticOperator = /[+-/*]/;
+    this.arithmeticOperator = /[*+-]/;
     this.relationalOperator = /[<>=]/;
     this.punctuations = /[;,().]/;
   }
@@ -19,19 +19,19 @@ export default class LexicalAnalyser {
   removeUselessData() {
     const { file, eof } = this;
     while (
-      this.index !== eof &&
+      this.index < eof &&
       (file[this.index] === '{' || file[this.index] === '/')
     ) {
       if (file[this.index] === '{') {
         do {
           this.index += 1;
-        } while (this.index !== eof && file[this.index] !== '}');
+        } while (this.index < eof && file[this.index] !== '}');
         this.index += 1;
       }
 
-      if (this.index !== eof && file[this.index] === '/') {
+      if (this.index < eof && file[this.index] === '/') {
         this.index += 1;
-        if (this.index !== eof && file[this.index] === '*') {
+        if (this.index < eof && file[this.index] === '*') {
           this.index += 1;
           let endComment = false;
           do {
@@ -42,26 +42,48 @@ export default class LexicalAnalyser {
               }
             }
             this.index += 1;
-          } while (this.index !== eof && !endComment);
+          } while (this.index < eof && !endComment);
         } else {
           return {};
         }
       }
-
-      while (this.index !== eof && file[this.index] === ' ') {
-        this.index += 1;
-      }
+    }
+    while (this.index < eof && file[this.index] === ' ') {
+      this.index += 1;
     }
 
     return null;
   }
 
   treatDigit() {
-    return this.error;
+    const { file, eof } = this;
+    const token = {
+      lexema: file[this.index],
+      simbolo: 'sdigito',
+    };
+
+    this.index += 1;
+
+    while (file[this.index] < eof && this.digits.test(file[this.index])) {
+      token.lexema += file[this.index];
+      this.index += 1;
+    }
+
+    return token;
   }
 
   treatLetter() {
-    return this.error;
+    const { file } = this;
+
+    let mixOfLetters = file[this.index];
+
+    this.index += 1;
+
+    while (file[this.index] === 'a') {
+      mixOfLetters += file[this.index];
+      this.index += 1;
+    }
+    return mixOfLetters;
   }
 
   treatAssignment() {
@@ -77,7 +99,33 @@ export default class LexicalAnalyser {
   }
 
   treatPunctuation() {
-    return this.error;
+    const { file } = this;
+    const token = {
+      lexema: file[this.index],
+      simbolo: '',
+    };
+
+    switch (file[this.index]) {
+      case ';':
+        token.simbolo = 'spontoVirgula';
+        break;
+      case ',':
+        token.simbolo = 'svirgula';
+        break;
+      case '(':
+        token.simbolo = 'sabreParenteses';
+        break;
+      case ')':
+        token.simbolo = 'sfechaParenteses';
+        break;
+      case '.':
+        token.simbolo = 'sponto';
+        break;
+      default:
+        break;
+    }
+    this.index += 1;
+    return token;
   }
 
   getToken() {
@@ -103,20 +151,17 @@ export default class LexicalAnalyser {
       error = _error;
       token = _token;
     } else if (this.punctuations.test(caractere)) {
-      const { _token, _error } = this.treatPunctuation();
-      error = _error;
-      token = _token;
-    } else if (this.eol.test(caractere)) {
+      token = this.treatPunctuation();
+    } else if (caractere.charCodeAt(0) === 13) {
       this.line += 1;
+      this.index += 2;
     } else {
       error = {
-        caractere,
+        caractere: caractere.charCodeAt(0),
         index,
         line: this.line,
       };
     }
-
-    this.index = this.eof;
 
     return {
       token,
@@ -139,8 +184,9 @@ export default class LexicalAnalyser {
           this.error = error;
           break;
         }
-
-        this.tokens.push(token);
+        if (token) {
+          this.tokens.push(token);
+        }
       }
     }
 
