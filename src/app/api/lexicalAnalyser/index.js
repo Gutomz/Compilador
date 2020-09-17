@@ -12,7 +12,7 @@ export default class LexicalAnalyser {
     this.digits = /^\d+$/;
     this.assignment = /[:]/;
     this.arithmeticOperator = /[*+-]/;
-    this.relationalOperator = /[<>=]/;
+    this.relationalOperator = /[<>=!]/;
     this.punctuations = /[;,().]/;
   }
 
@@ -20,7 +20,9 @@ export default class LexicalAnalyser {
     const { file, eof } = this;
     while (
       this.index < eof &&
-      (file[this.index] === '{' || file[this.index] === '/')
+      (file[this.index] === '{' ||
+        file[this.index] === '/' ||
+        file[this.index] === ' ')
     ) {
       if (file[this.index] === '{') {
         do {
@@ -44,12 +46,16 @@ export default class LexicalAnalyser {
             this.index += 1;
           } while (this.index < eof && !endComment);
         } else {
-          return {};
+          return {
+            line: this.line,
+            caractere: file[this.index],
+            index: this.index,
+          };
         }
       }
-    }
-    while (this.index < eof && file[this.index] === ' ') {
-      this.index += 1;
+      while (this.index < eof && file[this.index] === ' ') {
+        this.index += 1;
+      }
     }
 
     return null;
@@ -73,29 +79,178 @@ export default class LexicalAnalyser {
   }
 
   treatLetter() {
-    const { file } = this;
-
-    let mixOfLetters = file[this.index];
+    const { file, eof, digits, letters } = this;
+    const token = {
+      lexema: file[this.index],
+      simbolo: '',
+    };
 
     this.index += 1;
-
-    while (file[this.index] === 'a') {
-      mixOfLetters += file[this.index];
+    while (
+      this.index < eof &&
+      (digits.test(file[this.index]) ||
+        letters.test(file[this.index]) ||
+        file[this.index] === '_')
+    ) {
+      token.lexema += file[this.index];
       this.index += 1;
     }
-    return mixOfLetters;
+    switch (token.lexema) {
+      case 'programa':
+        token.simbolo = 'sprograma';
+        break;
+      case 'se':
+        token.simbolo = 'sse';
+        break;
+      case 'entao':
+        token.simbolo = 'sentao';
+        break;
+      case 'senao':
+        token.simbolo = 'ssenao';
+        break;
+      case 'enquanto':
+        token.simbolo = 'senquanto';
+        break;
+      case 'faca':
+        token.simbolo = 'sfaca';
+        break;
+      case 'inicio':
+        token.simbolo = 'sinicio';
+        break;
+      case 'fim':
+        token.simbolo = 'sfim';
+        break;
+      case 'escreva':
+        token.simbolo = 'sescreva';
+        break;
+      case 'leia':
+        token.simbolo = 'sleia';
+        break;
+      case 'var':
+        token.simbolo = 'svar';
+        break;
+      case 'inteiro':
+        token.simbolo = 'sinteiro';
+        break;
+      case 'booleano':
+        token.simbolo = 'sbooleano';
+        break;
+      case 'verdadeiro':
+        token.simbolo = 'sverdadeiro';
+        break;
+      case 'falso':
+        token.simbolo = 'sfalso';
+        break;
+      case 'procedimento':
+        token.simbolo = 'sprocedimento';
+        break;
+      case 'funcao':
+        token.simbolo = 'sfuncao';
+        break;
+      case 'div':
+        token.simbolo = 'sdiv';
+        break;
+      case 'e':
+        token.simbolo = 'se';
+        break;
+      case 'ou':
+        token.simbolo = 'sou';
+        break;
+      case 'nao':
+        token.simbolo = 'snao';
+        break;
+
+      default:
+        token.simbolo = 'sidentificador';
+        break;
+    }
+
+    return token;
   }
 
   treatAssignment() {
-    return this.error;
+    const { file } = this;
+    const token = {
+      lexema: file[this.index],
+      simbolo: 'sdoispontos',
+    };
+    this.index += 1;
+    if (file[this.index] === '=') {
+      token.lexema += file[this.index];
+      token.simbolo = 'satribuicao';
+      this.index += 1;
+    }
+    return token;
   }
 
   treatArithmeticOperator() {
-    return this.error;
+    const { file } = this;
+    const token = {
+      lexema: file[this.index],
+      simbolo: '',
+    };
+
+    switch (file[this.index]) {
+      case '+':
+        token.simbolo = 'smais';
+        break;
+      case '-':
+        token.simbolo = 'smenos';
+        break;
+      case '*':
+        token.simbolo = 'smulti';
+        break;
+      default:
+        break;
+    }
+    this.index += 1;
+    return token;
   }
 
   treatRelationalOperator() {
-    return this.error;
+    const { file } = this;
+    const token = {
+      lexema: file[this.index],
+      simbolo: '',
+    };
+    let error = null;
+
+    if (file[this.index] === '>') {
+      this.index += 1;
+      if (file[this.index] === '=') {
+        token.lexema += file[this.index];
+        token.simbolo = 'smaiorigual';
+        this.index += 1;
+      } else {
+        token.simbolo = 'smaior';
+      }
+    } else if (file[this.index] === '<') {
+      this.index += 1;
+      if (file[this.index] === '=') {
+        token.lexema += file[this.index];
+        token.simbolo = 'smenorigual';
+        this.index += 1;
+      } else {
+        token.simbolo = 'smenor';
+      }
+    } else if (file[this.index] === '!') {
+      this.index += 1;
+      if (file[this.index] === '=') {
+        token.lexema += file[this.index];
+        token.simbolo = 'sdiferente';
+        this.index += 1;
+      } else {
+        error = {
+          caractere: file[this.index - 1],
+          index: this.index,
+          line: this.line,
+        };
+      }
+    } else if (file[this.index] === '=') {
+      this.index += 1;
+      token.simbolo = 'sigual';
+    }
+    return { token, error };
   }
 
   treatPunctuation() {
@@ -139,15 +294,11 @@ export default class LexicalAnalyser {
     } else if (this.letters.test(caractere)) {
       token = this.treatLetter();
     } else if (this.assignment.test(caractere)) {
-      const { _token, _error } = this.treatAssignment();
-      error = _error;
-      token = _token;
+      token = this.treatAssignment();
     } else if (this.arithmeticOperator.test(caractere)) {
-      const { _token, _error } = this.treatArithmeticOperator();
-      error = _error;
-      token = _token;
+      token = this.treatArithmeticOperator();
     } else if (this.relationalOperator.test(caractere)) {
-      const { _token, _error } = this.treatRelationalOperator();
+      const { token: _token, error: _error } = this.treatRelationalOperator();
       error = _error;
       token = _token;
     } else if (this.punctuations.test(caractere)) {
@@ -157,7 +308,7 @@ export default class LexicalAnalyser {
       this.index += 2;
     } else {
       error = {
-        caractere: caractere.charCodeAt(0),
+        caractere,
         index,
         line: this.line,
       };
@@ -195,6 +346,8 @@ export default class LexicalAnalyser {
     console.log(this.file);
     console.groupEnd();
     console.log('index', this.index);
+    console.log('lines', this.line);
+    console.log('eof', this.eof);
     console.log('Tokens', this.tokens);
     console.log('Error', this.error);
     console.groupEnd();
