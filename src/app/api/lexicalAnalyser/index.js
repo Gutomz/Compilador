@@ -25,32 +25,57 @@ export default class LexicalAnalyser {
         file[this.index] === ' ')
     ) {
       if (file[this.index] === '{') {
+        const error = {
+          line: this.line,
+          caractere: file[this.index],
+          index: this.index,
+        };
+
         do {
           this.index += 1;
         } while (this.index < eof && file[this.index] !== '}');
+
+        if (this.index === eof) {
+          error.reason = 'missing }';
+          return error;
+        }
+
         this.index += 1;
       }
 
       if (this.index < eof && file[this.index] === '/') {
+        const error = {
+          line: this.line,
+          caractere: file[this.index],
+          index: this.index,
+        };
+
         this.index += 1;
+
         if (this.index < eof && file[this.index] === '*') {
-          this.index += 1;
+          error.caractere += file[this.index];
+
           let endComment = false;
           do {
+            this.index += 1;
+
             if (file[this.index] === '*') {
               this.index += 1;
               if (file[this.index] === '/') {
                 endComment = true;
               }
             }
-            this.index += 1;
           } while (this.index < eof && !endComment);
+
+          if (this.index === eof) {
+            error.reason = 'missing */';
+            return error;
+          }
+
+          this.index += 1;
         } else {
-          return {
-            line: this.line,
-            caractere: file[this.index],
-            index: this.index,
-          };
+          error.reason = 'missing *';
+          return error;
         }
       }
       while (this.index < eof && file[this.index] === ' ') {
@@ -341,15 +366,21 @@ export default class LexicalAnalyser {
       }
     }
 
+    const infos = {
+      indexesRead: this.index,
+      lines: this.line,
+      eof: this.eof,
+    };
+
     console.group('Resultado');
     console.group('File');
     console.log(this.file);
     console.groupEnd();
-    console.log('index', this.index);
-    console.log('lines', this.line);
-    console.log('eof', this.eof);
+    console.log('infos', infos);
     console.log('Tokens', this.tokens);
     console.log('Error', this.error);
     console.groupEnd();
+
+    return { tokens: this.token, error: this.error, ...infos };
   }
 }
