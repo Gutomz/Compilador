@@ -1,4 +1,4 @@
-import LexicalAnalyser from '../../api/lexicalAnalyser';
+import SyntacticAnalyser from '../../api/syntacticAnalyser';
 
 export const ACTION_SAVE_FILE = 'vm:ACTION_SAVE_FILE';
 
@@ -7,8 +7,17 @@ export const saveFile = (file) => ({
   payload: file,
 });
 
-export const initLexicalAnalyser = (file) => () => {
-  const lexicalAnalyser = new LexicalAnalyser(file);
+export const init = (file) => () => {
+  try {
+    const syntacticAnalyser = new SyntacticAnalyser(file);
 
-  lexicalAnalyser.init();
+    syntacticAnalyser.init();
+  } catch (err) {
+    console.group('Erro');
+    console.log('Motivo: ', err.reason);
+    console.log('Linha: ', err.line);
+    console.log('Index: ', err.index);
+    console.log('Caractere: ', err.caractere);
+    console.groupEnd();
+  }
 };

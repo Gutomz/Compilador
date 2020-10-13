@@ -1,3 +1,5 @@
+import { ErrorType, SymbolsType } from '../../enum/token';
+
 export default class LexicalAnalyser {
   constructor(file) {
     this.file = file;
@@ -29,6 +31,7 @@ export default class LexicalAnalyser {
           line: this.line,
           caractere: file[this.index],
           index: this.index,
+          reason: '',
         };
 
         do {
@@ -36,7 +39,7 @@ export default class LexicalAnalyser {
         } while (this.index < eof && file[this.index] !== '}');
 
         if (this.index === eof) {
-          error.reason = 'missing }';
+          error.reason = ErrorType.MISSING_CLOSE_BRACE;
           return error;
         }
 
@@ -68,13 +71,13 @@ export default class LexicalAnalyser {
           } while (this.index < eof && !endComment);
 
           if (this.index === eof) {
-            error.reason = 'missing */';
+            error.reason = ErrorType.MISSING_CLOSE_COMMENT;
             return error;
           }
 
           this.index += 1;
         } else {
-          error.reason = 'missing *';
+          error.reason = ErrorType.MISSING_STAR;
           return error;
         }
       }
@@ -87,10 +90,11 @@ export default class LexicalAnalyser {
   }
 
   treatDigit() {
-    const { file, eof } = this;
+    const { file, eof, line } = this;
     const token = {
       lexema: file[this.index],
-      simbolo: 'sdigito',
+      simbolo: SymbolsType.DIGITO,
+      line,
     };
 
     this.index += 1;
@@ -104,10 +108,11 @@ export default class LexicalAnalyser {
   }
 
   treatLetter() {
-    const { file, eof, digits, letters } = this;
+    const { file, eof, digits, letters, line } = this;
     const token = {
       lexema: file[this.index],
       simbolo: '',
+      line,
     };
 
     this.index += 1;
@@ -122,71 +127,71 @@ export default class LexicalAnalyser {
     }
     switch (token.lexema) {
       case 'programa':
-        token.simbolo = 'sprograma';
+        token.simbolo = SymbolsType.PROGRAMA;
         break;
       case 'se':
-        token.simbolo = 'sse';
+        token.simbolo = SymbolsType.SE;
         break;
       case 'entao':
-        token.simbolo = 'sentao';
+        token.simbolo = SymbolsType.ENTAO;
         break;
       case 'senao':
-        token.simbolo = 'ssenao';
+        token.simbolo = SymbolsType.SENAO;
         break;
       case 'enquanto':
-        token.simbolo = 'senquanto';
+        token.simbolo = SymbolsType.ENQUANTO;
         break;
       case 'faca':
-        token.simbolo = 'sfaca';
+        token.simbolo = SymbolsType.FACA;
         break;
       case 'inicio':
-        token.simbolo = 'sinicio';
+        token.simbolo = SymbolsType.INICIO;
         break;
       case 'fim':
-        token.simbolo = 'sfim';
+        token.simbolo = SymbolsType.FIM;
         break;
       case 'escreva':
-        token.simbolo = 'sescreva';
+        token.simbolo = SymbolsType.ESCREVA;
         break;
       case 'leia':
-        token.simbolo = 'sleia';
+        token.simbolo = SymbolsType.LEIA;
         break;
       case 'var':
-        token.simbolo = 'svar';
+        token.simbolo = SymbolsType.VAR;
         break;
       case 'inteiro':
-        token.simbolo = 'sinteiro';
+        token.simbolo = SymbolsType.INTEIRO;
         break;
       case 'booleano':
-        token.simbolo = 'sbooleano';
+        token.simbolo = SymbolsType.BOOLEANO;
         break;
       case 'verdadeiro':
-        token.simbolo = 'sverdadeiro';
+        token.simbolo = SymbolsType.VERDADEIRO;
         break;
       case 'falso':
-        token.simbolo = 'sfalso';
+        token.simbolo = SymbolsType.FALSO;
         break;
       case 'procedimento':
-        token.simbolo = 'sprocedimento';
+        token.simbolo = SymbolsType.PROCEDIMENTO;
         break;
       case 'funcao':
-        token.simbolo = 'sfuncao';
+        token.simbolo = SymbolsType.FUNCAO;
         break;
       case 'div':
-        token.simbolo = 'sdiv';
+        token.simbolo = SymbolsType.DIV;
         break;
       case 'e':
-        token.simbolo = 'se';
+        token.simbolo = SymbolsType.E;
         break;
       case 'ou':
-        token.simbolo = 'sou';
+        token.simbolo = SymbolsType.OU;
         break;
       case 'nao':
-        token.simbolo = 'snao';
+        token.simbolo = SymbolsType.NAO;
         break;
 
       default:
-        token.simbolo = 'sidentificador';
+        token.simbolo = SymbolsType.IDENTIFICADOR;
         break;
     }
 
@@ -194,36 +199,38 @@ export default class LexicalAnalyser {
   }
 
   treatAssignment() {
-    const { file } = this;
+    const { file, line } = this;
     const token = {
       lexema: file[this.index],
-      simbolo: 'sdoispontos',
+      simbolo: SymbolsType.DOISPONTOS,
+      line,
     };
     this.index += 1;
     if (file[this.index] === '=') {
       token.lexema += file[this.index];
-      token.simbolo = 'satribuicao';
+      token.simbolo = SymbolsType.ATRIBUICAO;
       this.index += 1;
     }
     return token;
   }
 
   treatArithmeticOperator() {
-    const { file } = this;
+    const { file, line } = this;
     const token = {
       lexema: file[this.index],
       simbolo: '',
+      line,
     };
 
     switch (file[this.index]) {
       case '+':
-        token.simbolo = 'smais';
+        token.simbolo = SymbolsType.MAIS;
         break;
       case '-':
-        token.simbolo = 'smenos';
+        token.simbolo = SymbolsType.MENOS;
         break;
       case '*':
-        token.simbolo = 'smulti';
+        token.simbolo = SymbolsType.MULTI;
         break;
       default:
         break;
@@ -233,10 +240,11 @@ export default class LexicalAnalyser {
   }
 
   treatRelationalOperator() {
-    const { file } = this;
+    const { file, line } = this;
     const token = {
       lexema: file[this.index],
       simbolo: '',
+      line,
     };
     let error = null;
 
@@ -244,25 +252,25 @@ export default class LexicalAnalyser {
       this.index += 1;
       if (file[this.index] === '=') {
         token.lexema += file[this.index];
-        token.simbolo = 'smaiorigual';
+        token.simbolo = SymbolsType.MAIORIGUAL;
         this.index += 1;
       } else {
-        token.simbolo = 'smaior';
+        token.simbolo = SymbolsType.MAIOR;
       }
     } else if (file[this.index] === '<') {
       this.index += 1;
       if (file[this.index] === '=') {
         token.lexema += file[this.index];
-        token.simbolo = 'smenorigual';
+        token.simbolo = SymbolsType.MENORIGUAL;
         this.index += 1;
       } else {
-        token.simbolo = 'smenor';
+        token.simbolo = SymbolsType.MENOR;
       }
     } else if (file[this.index] === '!') {
       this.index += 1;
       if (file[this.index] === '=') {
         token.lexema += file[this.index];
-        token.simbolo = 'sdiferente';
+        token.simbolo = SymbolsType.DIFERENTE;
         this.index += 1;
       } else {
         error = {
@@ -273,33 +281,34 @@ export default class LexicalAnalyser {
       }
     } else if (file[this.index] === '=') {
       this.index += 1;
-      token.simbolo = 'sigual';
+      token.simbolo = SymbolsType.IGUAL;
     }
     return { token, error };
   }
 
   treatPunctuation() {
-    const { file } = this;
+    const { file, line } = this;
     const token = {
       lexema: file[this.index],
       simbolo: '',
+      line,
     };
 
     switch (file[this.index]) {
       case ';':
-        token.simbolo = 'spontoVirgula';
+        token.simbolo = SymbolsType.PONTOVIRGULA;
         break;
       case ',':
-        token.simbolo = 'svirgula';
+        token.simbolo = SymbolsType.VIRGULA;
         break;
       case '(':
-        token.simbolo = 'sabreParenteses';
+        token.simbolo = SymbolsType.ABREPARENTESES;
         break;
       case ')':
-        token.simbolo = 'sfechaParenteses';
+        token.simbolo = SymbolsType.FECHAPARENTESES;
         break;
       case '.':
-        token.simbolo = 'sponto';
+        token.simbolo = SymbolsType.PONTO;
         break;
       default:
         break;
@@ -336,6 +345,7 @@ export default class LexicalAnalyser {
         caractere,
         index,
         line: this.line,
+        reason: ErrorType.INVALID_CARACTERE,
       };
     }
 
@@ -345,42 +355,30 @@ export default class LexicalAnalyser {
     };
   }
 
-  init() {
+  readToken() {
     while (this.index < this.eof) {
       const uselessDataError = this.removeUselessData();
       if (uselessDataError) {
-        this.error = uselessDataError;
-        break;
+        const err = new Error(uselessDataError.reason);
+        Object.assign(err, uselessDataError);
+        throw err;
       }
 
       if (this.index < this.eof) {
         const { token, error } = this.getToken();
 
         if (error) {
-          this.error = error;
-          break;
+          const err = new Error();
+          Object.assign(err, error);
+          throw err;
         }
+
         if (token) {
-          this.tokens.push(token);
+          return token;
         }
       }
     }
 
-    const infos = {
-      indexesRead: this.index,
-      lines: this.line,
-      eof: this.eof,
-    };
-
-    console.group('Resultado');
-    console.group('File');
-    console.log(this.file);
-    console.groupEnd();
-    console.log('infos', infos);
-    console.log('Tokens', this.tokens);
-    console.log('Error', this.error);
-    console.groupEnd();
-
-    return { tokens: this.token, error: this.error, ...infos };
+    return this.eof;
   }
 }

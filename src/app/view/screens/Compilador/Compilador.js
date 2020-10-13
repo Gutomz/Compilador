@@ -21,7 +21,7 @@ class Compilador extends React.PureComponent {
   };
 
   render() {
-    const { file, initLexicalAnalyser } = this.props;
+    const { file, init } = this.props;
     return (
       <div
         style={{
@@ -32,7 +32,7 @@ class Compilador extends React.PureComponent {
         }}
       >
         <Button onClick={() => this.onLoadFilePress()}>Carregar arquivo</Button>
-        <Button onClick={() => initLexicalAnalyser(file)}>Iniciar</Button>
+        <Button onClick={() => init(file)}>Iniciar</Button>
       </div>
     );
   }
@@ -44,8 +44,7 @@ const mapStateToProps = (state) => ({
 
 const mapDispatchToProps = (dispatch) => ({
   saveFile: (file) => dispatch(CompiladorActions.saveFile(file)),
-  initLexicalAnalyser: (file) =>
-    dispatch(CompiladorActions.initLexicalAnalyser(file)),
+  init: (file) => dispatch(CompiladorActions.init(file)),
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Compilador);
