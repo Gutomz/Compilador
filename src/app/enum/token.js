@@ -47,4 +47,11 @@ export const ErrorType = {
   INVALID_CARACTERE: 'Caractere inválido',
   MISSING_PROGRAM: 'Está faltando a palavra reservada programa.',
   MISSING_IDENTIFIER: 'Está faltando um identificador',
+  MISSING_POINT_COMMA: 'Está faltando um ponto e vírgula',
+  MISSING_PONT: 'Está faltando ponto',
+  MISSING_FINAL_ERROR_COMMENT_EOF: 'Não é final de arquivo ou não comentário',
+  MISSING_VAR: 'Está faltando variável',
+  MISSING_OPEN_PARENTHESES: 'Está faltando abrir o parenteses',
+  MISSING_CLOSE_PARENTHESES: 'Está faltando fechar o parenteses',
+  MISSING_DOUBLE_POINT: 'Está faltando dois pontos'
 };
