@@ -36,6 +36,10 @@ export default class LexicalAnalyser {
 
         do {
           this.index += 1;
+          if (file[this.index] === '\n') {
+            this.line += 1;
+            this.index += 1;
+          }
         } while (this.index < eof && file[this.index] !== '}');
 
         if (this.index === eof) {
@@ -61,6 +65,11 @@ export default class LexicalAnalyser {
           let endComment = false;
           do {
             this.index += 1;
+
+            if (file[this.index] === '\n') {
+              this.line += 1;
+              this.index += 1;
+            }
 
             if (file[this.index] === '*') {
               this.index += 1;

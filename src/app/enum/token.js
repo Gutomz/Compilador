@@ -48,10 +48,19 @@ export const ErrorType = {
   MISSING_PROGRAM: 'Está faltando a palavra reservada programa.',
   MISSING_IDENTIFIER: 'Está faltando um identificador',
   MISSING_POINT_COMMA: 'Está faltando um ponto e vírgula',
+  MISSING_COMMA: 'Está faltando uma vírgula',
   MISSING_PONT: 'Está faltando ponto',
   MISSING_FINAL_ERROR_COMMENT_EOF: 'Não é final de arquivo ou não comentário',
-  MISSING_VAR: 'Está faltando variável',
+  MISSING_VAR: 'Está faltando palavra reservada var',
   MISSING_OPEN_PARENTHESES: 'Está faltando abrir o parenteses',
   MISSING_CLOSE_PARENTHESES: 'Está faltando fechar o parenteses',
-  MISSING_DOUBLE_POINT: 'Está faltando dois pontos'
+  MISSING_DOUBLE_POINT: 'Está faltando dois pontos',
+  MISSING_INIT: 'Está faltando a palavra reservada inicio',
+  MISSING_THEN: 'Está faltando a palavra reservada entao',
+  MISSING_DO: 'Está faltando a palavra reservada faca',
+  INVALID_TYPE: 'Tipo de variável indefinido',
+  INVALID_FACTOR: 'Fator inválido',
+  INVALID_COMMA: 'Virgula inválida',
+  INVALID_OPERATION:
+    "Operação inválida! Esperando atribuição ':=' ou chamada de procedimento ';'",
 };

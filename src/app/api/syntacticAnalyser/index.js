@@ -5,346 +5,417 @@ export default class SyntacticAnalyser {
   constructor(file) {
     this.lexicalAnalyser = new LexicalAnalyser(file);
     this.line = 1;
+    this.token = null;
+    this.lastToken = null;
+    this.eof = false;
   }
 
   readToken() {
     try {
-      const token = this.lexicalAnalyser.readToken();
-      this.line = token.line;
-      return token;
+      const response = this.lexicalAnalyser.readToken();
+      console.log('Leu token', response);
+      if (typeof response === 'object') {
+        this.line = response.line;
+        this.lastToken = this.token;
+        this.token = response;
+        return;
+      }
+
+      this.eof = true;
     } catch (err) {
       const error = new Error(err.reason);
+      error.type = 'lexico';
       Object.assign(error, err);
       throw error;
     }
+  }
+
+  compareToken(symbolsType) {
+    if (typeof symbolsType === 'string') {
+      if (this.token && this.token.simbolo === symbolsType) {
+        return true;
+      }
+
+      return false;
+    }
+
+    if (typeof symbolsType === 'object') {
+      for (let i = 0; i < symbolsType.length; i += 1) {
+        if (this.token && this.token.simbolo === symbolsType[i]) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    return false;
   }
 
   Error(reason) {
     const error = new Error(reason);
     error.line = this.line;
     error.reason = reason;
+    error.token = this.token;
+    error.lastToken = this.lastToken;
+    error.type = 'sintatico';
 
     throw error;
   }
 
   init() {
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.PROGRAMA) {
-      token = this.readToken();
-      if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-        token = this.readToken();
-        if (token.simbolo === SymbolsType.PONTOVIRGULA) {
+    this.readToken();
+    if (this.compareToken(SymbolsType.PROGRAMA)) {
+      this.readToken();
+      if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        this.readToken();
+        if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
           this.blockAnalyserAlgorith();
-          if (token.simbolo === SymbolsType.PONTO) {
-            // if (!eof || comentario) {
-            //     //sucesso
-            // } else {
-            //   this.Error(ErrorType.MISSING_FINAL_ERROR_COMMENT_EOF);
-            // }
-          } else {
-            this.Error(ErrorType.MISSING_PONT);
-          }
-        } else {
-          this.Error(ErrorType.MISSING_POINT_COMMA);
-        }
-      } else {
-        this.Error(ErrorType.MISSING_IDENTIFIER);
-      }
-    } else {
-      this.Error(ErrorType.MISSING_PROGRAM);
-    }
+          if (this.compareToken(SymbolsType.PONTO)) {
+            this.readToken();
+            if (!this.eof)
+              this.Error(ErrorType.MISSING_FINAL_ERROR_COMMENT_EOF);
+          } else this.Error(ErrorType.MISSING_PONT);
+        } else this.Error(ErrorType.MISSING_POINT_COMMA);
+      } else this.Error(ErrorType.MISSING_IDENTIFIER);
+    } else this.Error(ErrorType.MISSING_PROGRAM);
   }
 
   blockAnalyserAlgorith() {
-    const token = this.readToken();
+    console.group('Entrou blockAnalyserAlgorith');
+    console.log(this.token);
+    this.readToken();
     this.variableAnalyserAlgorithET();
-    // AnalisaSubrotinas
-    // AnalisaComandos
+    this.subroutinesAnalyserAlgorith();
+    this.commandAnalyserAlgorith();
+    console.log('Saiu blockAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   variableAnalyserAlgorithET() {
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.VAR) {
-      token = this.readToken();
-      if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-        // abalisaVariáveis
-        if (token.simbolo === SymbolsType.PONTOVIRGULA) {
-          // return sucesso Léxico
-        } else {
-          this.Error(ErrorType.MISSING_POINT_COMMA);
+    console.group('Entrou variableAnalyserAlgorithET');
+    console.log(this.token);
+
+    if (this.compareToken(SymbolsType.VAR)) {
+      this.readToken();
+      if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        while (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+          this.variableAnalyserAlgorith();
+          if (this.compareToken(SymbolsType.PONTOVIRGULA)) this.readToken();
+          else this.Error(ErrorType.MISSING_POINT_COMMA);
         }
       } else {
         this.Error(ErrorType.MISSING_IDENTIFIER);
       }
-    } else {
-      this.Error(ErrorType.MISSING_VAR);
     }
+    console.log('Saiu variableAnalyserAlgorithET', this.token);
+    console.groupEnd();
   }
 
   variableAnalyserAlgorith() {
-    let token = this.readToken();
-    while (token.simbolo === SymbolsType.DOISPONTOS) {
-      if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-        token = this.readToken();
-        if (
-          token.simbolo === SymbolsType.VIRGULA ||
-          token.simbolo === SymbolsType.DOISPONTOS
-        ) {
-          if (token.simbolo === SymbolsType.VIRGULA) {
-            token = this.readToken();
-            if (token.simbolo === SymbolsType.DOISPONTOS) {
-              // error
-            } else {
-              // fim
-            }
-          } else {
-            // fim;
-          }
-        } else {
-          // Erro por falta do virugla/dois pontos. Usar flag?
-        }
-      } else {
-        this.Error(ErrorType.MISSING_IDENTIFIER);
-      }
-    }
+    console.group('Entrou variableAnalyserAlgorith');
+    console.log(this.token);
 
-    token = this.readToken();
-    // AnalisaTipo
+    do {
+      if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        this.readToken();
+        if (this.compareToken([SymbolsType.VIRGULA, SymbolsType.DOISPONTOS])) {
+          if (this.compareToken(SymbolsType.VIRGULA)) {
+            console.log('é virgula');
+            this.readToken();
+            if (this.compareToken(SymbolsType.DOISPONTOS))
+              this.Error(ErrorType.INVALID_COMMA);
+          }
+        } else this.Error(ErrorType.MISSING_DOUBLE_POINT);
+      } else this.Error(ErrorType.MISSING_IDENTIFIER);
+    } while (!this.compareToken(SymbolsType.DOISPONTOS));
+
+    this.readToken();
+    this.typeAnalyserAlgorith();
+    console.log('Saiu variableAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   typeAnalyserAlgorith() {
-    let token = this.readToken();
-    if (
-      token.simbolo !== SymbolsType.INTEIRO &&
-      token.simbolo !== SymbolsType.BOOLEANO
-    ) {
-      // Falta de uma das condições da parte de cima. Colocar flag pra identificar?
-    } else {
-      token = this.readToken();
+    console.group('Entrou typeAnalyserAlgorith');
+    console.log(this.token);
+
+    if (!this.compareToken([SymbolsType.INTEIRO, SymbolsType.BOOLEANO])) {
+      this.Error(ErrorType.INVALID_TYPE);
     }
+
+    this.readToken();
+    console.log('Saiu typeAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   commandAnalyserAlgorith() {
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.INICIO) {
-      token = this.readToken();
-      // AnáliseComandoSimples
-      while (token.simbolo !== SymbolsType.FIM) {
-        if (token.simbolo === SymbolsType.PONTOVIRGULA) {
-          token = this.readToken();
-          if (token.simbolo !== SymbolsType.FIM) {
-            // AnáliseComandoSimples
-            // Fim
+    console.group('Entrou commandAnalyserAlgorith');
+    console.log(this.token);
+
+    if (this.compareToken(SymbolsType.INICIO)) {
+      this.readToken();
+      this.simpleCommandAnalyser();
+      while (!this.compareToken(SymbolsType.FIM)) {
+        if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
+          this.readToken();
+          if (!this.compareToken(SymbolsType.FIM)) {
+            this.simpleCommandAnalyser();
           }
-        } else {
-          this.Error(ErrorType.PONTOVIRGULA);
-        }
+        } else this.Error(ErrorType.MISSING_POINT_COMMA);
       }
-    } else {
-      this.Error(ErrorType.MISSING_IDENTIFIER);
-    }
+      this.readToken();
+    } else this.Error(ErrorType.MISSING_INIT);
+    console.log('Saiu commandAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   simpleCommandAnalyser() {
-    const token = this.readToken();
-    if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-      // AnalisaAtributoChProcedimento
-    } else if (token.simbolo === SymbolsType.SE) {
-      // AnalisaSe
-    } else if (token.simbolo === SymbolsType.ENQUANTO) {
-      // AnalisaEnquanto
-    } else if (token.simbolo === SymbolsType.LEIA) {
-      // AnalisaLeia
-    } else if (token.simbolo === SymbolsType.ESCREVA) {
-      // AnalisaEscreva
+    console.group('Entrou simpleCommandAnalyser');
+    console.log(this.token);
+
+    if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+      this.procedureAssignmentCallAnalyser();
+    } else if (this.compareToken(SymbolsType.SE)) {
+      this.ifAnalyseAlgorith();
+    } else if (this.compareToken(SymbolsType.ENQUANTO)) {
+      this.whileAnalyserAlgorith();
+    } else if (this.compareToken(SymbolsType.LEIA)) {
+      this.readAnalyserAlgorith();
+    } else if (this.compareToken(SymbolsType.ESCREVA)) {
+      this.writeAnalyseAlgorith();
     } else {
-      // AnalisaComando
+      this.commandAnalyserAlgorith();
     }
+    console.log('Saiu simpleCommandAnalyser', this.token);
+    console.groupEnd();
   }
 
-  procAtribAnalyser() {
-    const token = this.readToken();
-    if (token.simbolo === SymbolsType.ATRIBUICAO) {
-      // AnalisaAtribuicao
-    } else {
-      // ChamadaProcedimento
-    }
+  procedureAssignmentCallAnalyser() {
+    console.group('Entrou procedureAssignmentCallAnalyser');
+    console.log(this.token);
+
+    this.readToken();
+    if (this.compareToken(SymbolsType.ATRIBUICAO)) {
+      this.readToken();
+      this.expressionAnalyserAlgorith();
+    } else if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
+      // this.procedureCallAnalyser();
+    } else this.Error(ErrorType.INVALID_OPERATION);
+    console.log('Saiu procedureAssignmentCallAnalyser', this.token);
+    console.groupEnd();
+  }
+
+  // procedureCallAnalyser() {
+  //   /* Analisador semântico */
+  // }
+
+  functionCallAnalyser() {
+    console.group('Entrou functionCallAnalyser');
+    console.log(this.token);
+
+    this.readToken();
+    console.log('Saiu functionCallAnalyser', this.token);
+    console.groupEnd();
   }
 
   readAnalyserAlgorith() {
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.ABREPARENTESES) {
-      token = this.readToken();
-      if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-        token = this.readToken();
-        if (token.simbolo === SymbolsType.FECHAPARENTESES) {
-          token = this.readToken();
-        } else {
-          this.Error(ErrorType.MISSING_CLOSE_PARENTHESES);
-        }
-      } else {
-        this.Error(ErrorType.MISSING_IDENTIFIER);
-      }
-    } else {
-      this.Error(ErrorType.MISSING_OPEN_PARENTHESES);
-    }
+    console.group('Entrou readAnalyserAlgorith');
+    console.log(this.token);
+
+    this.readToken();
+    if (this.compareToken(SymbolsType.ABREPARENTESES)) {
+      this.readToken();
+      if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        this.readToken();
+        if (this.compareToken(SymbolsType.FECHAPARENTESES)) {
+          this.readToken();
+        } else this.Error(ErrorType.MISSING_CLOSE_PARENTHESES);
+      } else this.Error(ErrorType.MISSING_IDENTIFIER);
+    } else this.Error(ErrorType.MISSING_OPEN_PARENTHESES);
+    console.log('Saiu readAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   writeAnalyseAlgorith() {
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.ABREPARENTESES) {
-      token = this.readToken();
-      if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-        token = this.readToken();
-        if (token.simbolo === SymbolsType.FECHAPARENTESES) {
-          token = this.readToken();
-        } else {
-          this.Error(ErrorType.MISSING_CLOSE_PARENTHESES);
-        }
-      } else {
-        this.Error(ErrorType.MISSING_IDENTIFIER);
-      }
-    } else {
-      this.Error(ErrorType.MISSING_OPEN_PARENTHESES);
-    }
+    console.group('Entrou writeAnalyseAlgorith');
+    console.log(this.token);
+
+    this.readToken();
+    if (this.compareToken(SymbolsType.ABREPARENTESES)) {
+      this.readToken();
+      if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        this.readToken();
+        if (this.compareToken(SymbolsType.FECHAPARENTESES)) {
+          this.readToken();
+        } else this.Error(ErrorType.MISSING_CLOSE_PARENTHESES);
+      } else this.Error(ErrorType.MISSING_IDENTIFIER);
+    } else this.Error(ErrorType.MISSING_OPEN_PARENTHESES);
+    console.log('Saiu writeAnalyseAlgorith', this.token);
+    console.groupEnd();
   }
 
   whileAnalyserAlgorith() {
-    let token = this.readToken();
-    // AnalisaExpressão
-    if (token.simbolo === SymbolsType.FACA) {
-      token = this.readToken();
-      // AnalisaComandoSimples simpleCommandAnalyser
-    } else {
-      this.Error(ErrorType.MISSING_IDENTIFIER); // tá certo?
-    }
+    console.group('Entrou whileAnalyserAlgorith');
+    console.log(this.token);
+
+    this.readToken();
+    this.expressionAnalyserAlgorith();
+    if (this.compareToken(SymbolsType.FACA)) {
+      this.readToken();
+      this.simpleCommandAnalyser();
+    } else this.Error(ErrorType.MISSING_DO);
+    console.log('Saiu whileAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   ifAnalyseAlgorith() {
-    // DÚVIDA!
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.ENTAO) {
-      token = this.readToken();
-      // AnalisaComandoSimples simpleCommandAnalyser
-      if (token.simbolo === SymbolsType.SENAO) {
-        token = this.readToken();
-        // AnalisaComandoSimples simpleCommandAnalyser
-      } else {
-        // fim
+    console.group('Entrou ifAnalyseAlgorith');
+    console.log(this.token);
+
+    this.readToken();
+    this.expressionAnalyserAlgorith();
+    if (this.compareToken(SymbolsType.ENTAO)) {
+      this.readToken();
+      this.simpleCommandAnalyser();
+      if (this.compareToken(SymbolsType.SENAO)) {
+        this.readToken();
+        this.simpleCommandAnalyser();
       }
-    } else {
-      this.Error(ErrorType.MISSING_IDENTIFIER);
-    }
+    } else this.Error(ErrorType.MISSING_THEN);
+    console.log('Saiu ifAnalyseAlgorith', this.token);
+    console.groupEnd();
   }
 
-  // subroutinesAnalyserAlgorith() {
-  //   let token = this.readToken();
-  //   if (token.simbolo === SymbolsType.PROCEDIMENTO || token.simbolo === SymbolsType.FUNCAO) {
-  //       while (token.simbolo === SymbolsType.PROCEDIMENTO || token.simbolo === SymbolsType.FUNCAO) {
-  //         if (token.simbolo === SymbolsType.PROCEDIMENTO) {
-  //           //AnalisaDeclaracaoProcedimento
-  //         } else {
-  //           //AnalisaDeclaracaoFuncao
-  //         }
-  //       }
-  //   }
-  // }
+  subroutinesAnalyserAlgorith() {
+    console.group('Entrou subroutinesAnalyserAlgorith');
+    console.log(this.token);
+
+    while (this.compareToken([SymbolsType.PROCEDIMENTO, SymbolsType.FUNCAO])) {
+      if (this.compareToken(SymbolsType.PROCEDIMENTO)) {
+        this.procedureDeclarationAnalyserAlgorith();
+      } else {
+        this.functionDeclarationAnalyserAlgorith();
+      }
+
+      if (this.compareToken(SymbolsType.PONTOVIRGULA)) this.readToken();
+      else this.Error(ErrorType.MISSING_POINT_COMMA);
+    }
+    console.log('Saiu subroutinesAnalyserAlgorith', this.token);
+    console.groupEnd();
+  }
+
+  procedureDeclarationAnalyserAlgorith() {
+    console.group('Entrou procedureDeclarationAnalyserAlgorith');
+    console.log(this.token);
+
+    this.readToken();
+    if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+      this.readToken();
+      if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
+        this.blockAnalyserAlgorith();
+      } else this.Error(ErrorType.MISSING_POINT_COMMA);
+    } else this.Error(ErrorType.MISSING_IDENTIFIER);
+    console.log('Saiu procedureDeclarationAnalyserAlgorith', this.token);
+    console.groupEnd();
+  }
 
   functionDeclarationAnalyserAlgorith() {
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-      token = this.readToken();
-      if (token.simbolo === SymbolsType.DOISPONTOS) {
-        token = this.readToken();
-        if (
-          token.simbolo === SymbolsType.INTEIRO ||
-          token.simbolo === SymbolsType.BOOLEANO
-        ) {
-          token = this.readToken();
-          if (token.simbolo === SymbolsType.PONTOVIRGULA) {
-            // AnalisaBloco
-          }
-        } else {
-          // Falta de inteiro ou booleano. Usar flag?
-        }
-      } else {
-        this.Error(ErrorType.MISSING_DOUBLE_POINT);
-      }
-    } else {
-      this.Error(ErrorType.MISSING_IDENTIFIER);
-    }
+    console.group('Entrou functionDeclarationAnalyserAlgorith');
+    console.log(this.token);
+
+    this.readToken();
+    if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+      this.readToken();
+      if (this.compareToken(SymbolsType.DOISPONTOS)) {
+        this.readToken();
+        this.typeAnalyserAlgorith();
+        if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
+          this.blockAnalyserAlgorith();
+        } else this.Error(ErrorType.MISSING_POINT_COMMA);
+      } else this.Error(ErrorType.MISSING_DOUBLE_POINT);
+    } else this.Error(ErrorType.MISSING_IDENTIFIER);
+    console.log('Saiu functionDeclarationAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   expressionAnalyserAlgorith() {
-    let token = this.readToken();
-    // AnalisaExpressaoSimples
+    console.group('Entrou expressionAnalyserAlgorith');
+    console.log(this.token);
+
+    this.simpleExpressionAnalyserAlgorith();
     if (
-      token.simbolo === SymbolsType.MAIOR ||
-      token.simbolo === SymbolsType.MAIORIGUAL ||
-      token.simbolo === SymbolsType.MENOR ||
-      token.simbolo === SymbolsType.MENORIGUAL ||
-      token.simbolo === SymbolsType.IGUAL ||
-      token.simbolo === SymbolsType.DIFERENTE
+      this.compareToken([
+        SymbolsType.MAIOR,
+        SymbolsType.MAIORIGUAL,
+        SymbolsType.MENOR,
+        SymbolsType.MENORIGUAL,
+        SymbolsType.IGUAL,
+        SymbolsType.DIFERENTE,
+      ])
     ) {
-      token = this.readToken();
-      // AnalisaExpressaoSimples
+      this.readToken();
+      this.simpleExpressionAnalyserAlgorith();
     }
+    console.log('Saiu expressionAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   simpleExpressionAnalyserAlgorith() {
-    let token = this.readToken();
-    if (
-      token.simbolo === SymbolsType.MAIS ||
-      token.simbolo === SymbolsType.MENOS
-    ) {
-      token = this.readToken();
-      // AnalisaTermo
-      while (
-        token.simbolo === SymbolsType.MAIS ||
-        token.simbolo === SymbolsType.MENOS ||
-        token.simbolo === SymbolsType.OU
-      ) {
-        token = this.readToken();
-        // AnalisaTermo
-      }
+    console.group('Entrou simpleExpressionAnalyserAlgorith');
+    console.log(this.token);
+
+    if (this.compareToken([SymbolsType.MAIS, SymbolsType.MENOS])) {
+      this.readToken();
     }
+
+    this.termAnalyserAlgorith();
+    while (
+      this.compareToken([SymbolsType.MAIS, SymbolsType.MENOS, SymbolsType.OU])
+    ) {
+      this.readToken();
+      this.termAnalyserAlgorith();
+    }
+    console.log('Saiu simpleExpressionAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   termAnalyserAlgorith() {
-    let token = this.readToken();
+    console.group('Entrou termAnalyserAlgorith');
+    console.log(this.token);
+
+    this.factorAnalyserAlgorith();
     while (
-      token.simbolo === SymbolsType.MULTI ||
-      token.simbolo === SymbolsType.DIV ||
-      token.simbolo === SymbolsType.SE
+      this.compareToken([SymbolsType.MULTI, SymbolsType.DIV, SymbolsType.E])
     ) {
-      token = this.readToken();
-      // AnalisaFator
+      this.readToken();
+      this.factorAnalyserAlgorith();
     }
+    console.log('Saiu termAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 
   factorAnalyserAlgorith() {
-    let token = this.readToken();
-    if (token.simbolo === SymbolsType.IDENTIFICADOR) {
-      // AnalisaChamadaFuncao
-      // Fim
-    } else if (token.simbolo === SymbolsType.DIGITO) {
-      token = this.readToken();
-    } else if (token.simbolo === SymbolsType.NAO) {
-      token = this.readToken();
-      // AnalisaFator
-    } else if (token.simbolo === SymbolsType.ABREPARENTESES) {
-      token = this.readToken();
-      // AnalisaExpressão(Token)
-      if (token.simbolo === SymbolsType.FECHAPARENTESES) {
-        token = this.readToken();
-      } else {
-        this.Error(ErrorType.MISSING_CLOSE_PARENTHESES);
-      }
-    } else if (
-      token.simbolo === SymbolsType.VERDADEIRO ||
-      token.simbolo === SymbolsType.FALSO
-    ) {
-      token = this.readToken();
-    }
+    console.group('Entrou factorAnalyserAlgorith');
+    console.log(this.token);
+
+    if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+      this.functionCallAnalyser();
+    } else if (this.compareToken(SymbolsType.DIGITO)) {
+      this.readToken();
+    } else if (this.compareToken(SymbolsType.NAO)) {
+      this.readToken();
+      this.factorAnalyserAlgorith();
+    } else if (this.compareToken(SymbolsType.ABREPARENTESES)) {
+      this.readToken();
+      this.expressionAnalyserAlgorith();
+      if (this.compareToken(SymbolsType.FECHAPARENTESES)) {
+        this.readToken();
+      } else this.Error(ErrorType.MISSING_CLOSE_PARENTHESES);
+    } else if (this.compareToken([SymbolsType.VERDADEIRO, SymbolsType.FALSO])) {
+      this.readToken();
+    } else this.Error(ErrorType.INVALID_FACTOR);
+    console.log('Saiu factorAnalyserAlgorith', this.token);
+    console.groupEnd();
   }
 }
