@@ -1,10 +1,131 @@
-import { ErrorType, SymbolTableType } from '../../enum/token';
+import {
+  ErrorType,
+  PrecedenceTableType,
+  SymbolsType,
+  SymbolTableType,
+} from '../../enum/token';
 
 export default class SemanticAnalyser {
   constructor() {
     this.symbolTable = [];
     this.scopeTable = [];
+
+    this.expression = [];
+    this.expressionStack = [];
+    this.expressionLevel = 0;
+
+    this.digits = /^\d+$/;
   }
+
+  precedenceTable = [
+    { lexema: ')', level: 8 },
+    {
+      lexema: '-u',
+      level: 7,
+      operators: 1,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.INTEGER,
+    },
+    {
+      lexema: '+u',
+      level: 7,
+      operators: 1,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.INTEGER,
+    },
+    {
+      lexema: 'nao',
+      level: 7,
+      operators: 1,
+      type: PrecedenceTableType.BOOLEAN,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: '*',
+      level: 6,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.INTEGER,
+    },
+    {
+      lexema: 'div',
+      level: 6,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.INTEGER,
+    },
+    {
+      lexema: '-',
+      level: 5,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.INTEGER,
+    },
+    {
+      lexema: '+',
+      level: 5,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.INTEGER,
+    },
+    {
+      lexema: '>',
+      level: 4,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: '>=',
+      level: 4,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: '<',
+      level: 4,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: '<=',
+      level: 4,
+      operators: 2,
+      type: PrecedenceTableType.INTEGER,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: '=',
+      level: 3,
+      operators: 2,
+      type: PrecedenceTableType.BOTH,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: '!=',
+      level: 3,
+      operators: 2,
+      type: PrecedenceTableType.BOTH,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: 'e',
+      level: 2,
+      operators: 2,
+      type: PrecedenceTableType.BOOLEAN,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    {
+      lexema: 'ou',
+      level: 1,
+      operators: 2,
+      type: PrecedenceTableType.BOOLEAN,
+      return: PrecedenceTableType.BOOLEAN,
+    },
+    { lexema: '(', level: 0 },
+  ];
 
   Error = (reason, token) => {
     const error = new Error(reason);
@@ -145,5 +266,79 @@ export default class SemanticAnalyser {
 
   popScope() {
     return this.scopeTable.pop();
+  }
+
+  insertExpression(lexema, type) {
+    if (
+      this.compareIdentifierType(type, [
+        SymbolsType.IDENTIFICADOR,
+        SymbolsType.DIGITO,
+        SymbolsType.VERDADEIRO,
+        SymbolsType.FALSO,
+      ])
+    ) {
+      this.expression.push(lexema);
+    } else if (this.compareIdentifierType(type, SymbolsType.ABREPARENTESES)) {
+      this.expressionLevel += 1;
+      this.expressionStack.push(lexema);
+    } else if (this.compareIdentifierType(type, SymbolsType.FECHAPARENTESES)) {
+      let stackItem = null;
+      do {
+        stackItem = this.expressionStack.pop();
+        if (stackItem !== '(') this.expression.push(stackItem);
+      } while (stackItem !== '(');
+      this.expressionLevel -= 1;
+    } else {
+      const operatorItem = this.precedenceTable.find(
+        (item) => item.lexema === lexema
+      );
+      const stackOperatorItem =
+        this.expressionStack.length > 0
+          ? this.precedenceTable.find(
+              (item) =>
+                item.lexema ===
+                this.expressionStack[this.expressionStack.length - 1]
+            )
+          : null;
+
+      if (!operatorItem) return;
+
+      if (
+        !stackOperatorItem ||
+        (stackOperatorItem && stackOperatorItem.lexema === '(')
+      ) {
+        this.expressionStack.push(lexema);
+      } else if (operatorItem.level <= stackOperatorItem.level) {
+        this.expression.push(this.expressionStack.pop());
+        this.expressionStack.push(lexema);
+      } else {
+        this.expressionStack.push(lexema);
+      }
+    }
+    console.group('insertExpression');
+    console.log('this.expression', this.expression);
+    console.log('this.expressionStack', this.expressionStack);
+    console.log('this.expressionLevel', this.expressionLevel);
+    console.groupEnd();
+  }
+
+  verifyExpressionEnd() {
+    if (this.expressionLevel !== 0) return;
+
+    if (this.expressionStack.length > 0) {
+      for (let i = 0; i < this.expressionStack.length; i += 1) {
+        this.expression.push(this.expressionStack.pop());
+      }
+    }
+
+    console.group('Expression End');
+    console.log('this.expression', this.expression);
+    console.log('this.expressionStack', this.expressionStack);
+    console.log('this.expressionLevel', this.expressionLevel);
+    console.groupEnd();
+
+    this.expression = [];
+    this.expressionStack = [];
+    this.expressionLevel = 0;
   }
 }

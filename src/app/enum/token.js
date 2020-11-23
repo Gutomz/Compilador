@@ -48,6 +48,12 @@ export const SymbolTableType = {
   FUNCTION_BOOLEAN: 'funcao_booleana',
 };
 
+export const PrecedenceTableType = {
+  INTEGER: 'inteiro',
+  BOOLEAN: 'booleano',
+  BOTH: 'ambos',
+};
+
 export const ErrorType = {
   MISSING_CLOSE_BRACE: 'Faltando o caractere }',
   MISSING_CLOSE_COMMENT: 'Faltando */',

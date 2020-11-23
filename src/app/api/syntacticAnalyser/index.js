@@ -402,9 +402,16 @@ export default class SyntacticAnalyser {
         SymbolsType.DIFERENTE,
       ])
     ) {
+      this.semanticAnalyser.insertExpression(
+        this.token.lexema,
+        this.token.simbolo
+      );
       this.readToken();
       this.simpleExpressionAnalyserAlgorith();
     }
+
+    this.semanticAnalyser.verifyExpressionEnd();
+
     console.log('Saiu expressionAnalyserAlgorith', this.token);
     console.groupEnd();
   }
@@ -414,6 +421,10 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     if (this.compareToken([SymbolsType.MAIS, SymbolsType.MENOS])) {
+      this.semanticAnalyser.insertExpression(
+        this.compareToken(SymbolsType.MAIS) ? '+u' : '-u',
+        this.token.simbolo
+      );
       this.readToken();
     }
 
@@ -421,6 +432,10 @@ export default class SyntacticAnalyser {
     while (
       this.compareToken([SymbolsType.MAIS, SymbolsType.MENOS, SymbolsType.OU])
     ) {
+      this.semanticAnalyser.insertExpression(
+        this.token.lexema,
+        this.token.simbolo
+      );
       this.readToken();
       this.termAnalyserAlgorith();
     }
@@ -436,6 +451,10 @@ export default class SyntacticAnalyser {
     while (
       this.compareToken([SymbolsType.MULTI, SymbolsType.DIV, SymbolsType.E])
     ) {
+      this.semanticAnalyser.insertExpression(
+        this.token.lexema,
+        this.token.simbolo
+      );
       this.readToken();
       this.factorAnalyserAlgorith();
     }
@@ -447,25 +466,37 @@ export default class SyntacticAnalyser {
     console.group('Entrou factorAnalyserAlgorith');
     console.log(this.token);
 
+    const insertExpression = () =>
+      this.semanticAnalyser.insertExpression(
+        this.token.lexema,
+        this.token.simbolo
+      );
+
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
       this.semanticAnalyser.searchTable(this.token, [
         SymbolTableType.VARIABLE,
         SymbolTableType.FUNCTION_INTEGER,
         SymbolTableType.FUNCTION_BOOLEAN,
       ]);
+      insertExpression();
       this.functionCallAnalyser();
     } else if (this.compareToken(SymbolsType.DIGITO)) {
+      insertExpression();
       this.readToken();
     } else if (this.compareToken(SymbolsType.NAO)) {
+      insertExpression();
       this.readToken();
       this.factorAnalyserAlgorith();
     } else if (this.compareToken(SymbolsType.ABREPARENTESES)) {
+      insertExpression();
       this.readToken();
       this.expressionAnalyserAlgorith();
       if (this.compareToken(SymbolsType.FECHAPARENTESES)) {
+        insertExpression();
         this.readToken();
       } else this.Error(ErrorType.MISSING_CLOSE_PARENTHESES);
     } else if (this.compareToken([SymbolsType.VERDADEIRO, SymbolsType.FALSO])) {
+      insertExpression();
       this.readToken();
     } else this.Error(ErrorType.INVALID_FACTOR);
     console.log('Saiu factorAnalyserAlgorith', this.token);
