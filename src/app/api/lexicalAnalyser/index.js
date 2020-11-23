@@ -349,6 +349,9 @@ export default class LexicalAnalyser {
     } else if (caractere.charCodeAt(0) === 13) {
       this.line += 1;
       this.index += 2;
+    } else if (caractere.charCodeAt(0) === 10) {
+      this.line += 1;
+      this.index += 1;
     } else {
       error = {
         caractere,

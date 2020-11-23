@@ -40,6 +40,14 @@ export const SymbolsType = {
   PONTO: 'sponto',
 };
 
+export const SymbolTableType = {
+  PROGRAM: 'nomedeprograma',
+  VARIABLE: 'variavel',
+  PROCEDURE: 'procedimento',
+  FUNCTION_INTEGER: 'funcao_inteira',
+  FUNCTION_BOOLEAN: 'funcao_booleana',
+};
+
 export const ErrorType = {
   MISSING_CLOSE_BRACE: 'Faltando o caractere }',
   MISSING_CLOSE_COMMENT: 'Faltando */',
@@ -63,4 +71,9 @@ export const ErrorType = {
   INVALID_COMMA: 'Virgula inválida',
   INVALID_OPERATION:
     "Operação inválida! Esperando atribuição ':=' ou chamada de procedimento ';'",
+  DUPLICATED: 'Identificador duplicado',
+  UNDECLARED: 'Identificador não declarado',
+  UNDECLARED_VAR: 'Variável não declarada',
+  UNDECLARED_FUNC: 'Função não declarada',
+  UNDECLARED_PROC: 'Procedimento não declarado',
 };

@@ -1,13 +1,17 @@
 import LexicalAnalyser from '../lexicalAnalyser';
-import { ErrorType, SymbolsType } from '../../enum/token';
+import SemanticAnalyser from '../semanticAnalyser';
+import { ErrorType, SymbolsType, SymbolTableType } from '../../enum/token';
 
 export default class SyntacticAnalyser {
   constructor(file) {
     this.lexicalAnalyser = new LexicalAnalyser(file);
+    this.semanticAnalyser = new SemanticAnalyser();
+
     this.line = 1;
     this.token = null;
     this.lastToken = null;
     this.eof = false;
+    this.tokens = [];
   }
 
   readToken() {
@@ -18,6 +22,7 @@ export default class SyntacticAnalyser {
         this.line = response.line;
         this.lastToken = this.token;
         this.token = response;
+        this.tokens.push(response);
         return;
       }
 
@@ -63,11 +68,19 @@ export default class SyntacticAnalyser {
     throw error;
   }
 
+  getSymbolTableFunctionType = (type) => {
+    if (type === SymbolsType.INTEIRO) return SymbolTableType.FUNCTION_INTEGER;
+    if (type === SymbolsType.BOOLEANO) return SymbolTableType.FUNCTION_BOOLEAN;
+
+    return null;
+  };
+
   init() {
     this.readToken();
     if (this.compareToken(SymbolsType.PROGRAMA)) {
       this.readToken();
       if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        this.semanticAnalyser.insertTable(this.token, SymbolTableType.PROGRAM);
         this.readToken();
         if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
           this.blockAnalyserAlgorith();
@@ -116,12 +129,19 @@ export default class SyntacticAnalyser {
     console.group('Entrou variableAnalyserAlgorith');
     console.log(this.token);
 
+    const variableDeclarationTable = [];
+
     do {
       if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        variableDeclarationTable.push(
+          this.semanticAnalyser.insertTable(
+            this.token,
+            SymbolTableType.VARIABLE
+          )
+        );
         this.readToken();
         if (this.compareToken([SymbolsType.VIRGULA, SymbolsType.DOISPONTOS])) {
           if (this.compareToken(SymbolsType.VIRGULA)) {
-            console.log('é virgula');
             this.readToken();
             if (this.compareToken(SymbolsType.DOISPONTOS))
               this.Error(ErrorType.INVALID_COMMA);
@@ -131,7 +151,10 @@ export default class SyntacticAnalyser {
     } while (!this.compareToken(SymbolsType.DOISPONTOS));
 
     this.readToken();
-    this.typeAnalyserAlgorith();
+    const type = this.typeAnalyserAlgorith();
+    variableDeclarationTable.forEach((index) => {
+      this.semanticAnalyser.updateSymbolTableVariableType(index, type);
+    });
     console.log('Saiu variableAnalyserAlgorith', this.token);
     console.groupEnd();
   }
@@ -139,6 +162,7 @@ export default class SyntacticAnalyser {
   typeAnalyserAlgorith() {
     console.group('Entrou typeAnalyserAlgorith');
     console.log(this.token);
+    const output = this.token.simbolo;
 
     if (!this.compareToken([SymbolsType.INTEIRO, SymbolsType.BOOLEANO])) {
       this.Error(ErrorType.INVALID_TYPE);
@@ -147,6 +171,7 @@ export default class SyntacticAnalyser {
     this.readToken();
     console.log('Saiu typeAnalyserAlgorith', this.token);
     console.groupEnd();
+    return output;
   }
 
   commandAnalyserAlgorith() {
@@ -155,15 +180,19 @@ export default class SyntacticAnalyser {
 
     if (this.compareToken(SymbolsType.INICIO)) {
       this.readToken();
-      this.simpleCommandAnalyser();
-      while (!this.compareToken(SymbolsType.FIM)) {
-        if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
-          this.readToken();
-          if (!this.compareToken(SymbolsType.FIM)) {
-            this.simpleCommandAnalyser();
-          }
-        } else this.Error(ErrorType.MISSING_POINT_COMMA);
+
+      if (!this.compareToken(SymbolsType.FIM)) {
+        this.simpleCommandAnalyser();
+        while (!this.compareToken(SymbolsType.FIM)) {
+          if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
+            this.readToken();
+            if (!this.compareToken(SymbolsType.FIM)) {
+              this.simpleCommandAnalyser();
+            }
+          } else this.Error(ErrorType.MISSING_POINT_COMMA);
+        }
       }
+
       this.readToken();
     } else this.Error(ErrorType.MISSING_INIT);
     console.log('Saiu commandAnalyserAlgorith', this.token);
@@ -175,6 +204,10 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+      this.semanticAnalyser.searchTable(this.token, [
+        SymbolTableType.VARIABLE,
+        SymbolTableType.PROCEDURE,
+      ]);
       this.procedureAssignmentCallAnalyser();
     } else if (this.compareToken(SymbolsType.SE)) {
       this.ifAnalyseAlgorith();
@@ -213,7 +246,6 @@ export default class SyntacticAnalyser {
   functionCallAnalyser() {
     console.group('Entrou functionCallAnalyser');
     console.log(this.token);
-
     this.readToken();
     console.log('Saiu functionCallAnalyser', this.token);
     console.groupEnd();
@@ -227,6 +259,7 @@ export default class SyntacticAnalyser {
     if (this.compareToken(SymbolsType.ABREPARENTESES)) {
       this.readToken();
       if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        this.semanticAnalyser.searchTable(this.token, SymbolTableType.VARIABLE);
         this.readToken();
         if (this.compareToken(SymbolsType.FECHAPARENTESES)) {
           this.readToken();
@@ -245,6 +278,11 @@ export default class SyntacticAnalyser {
     if (this.compareToken(SymbolsType.ABREPARENTESES)) {
       this.readToken();
       if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        this.semanticAnalyser.searchTable(this.token, [
+          SymbolTableType.VARIABLE,
+          SymbolTableType.FUNCTION_BOOLEAN,
+          SymbolTableType.FUNCTION_INTEGER,
+        ]);
         this.readToken();
         if (this.compareToken(SymbolsType.FECHAPARENTESES)) {
           this.readToken();
@@ -310,12 +348,14 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     this.readToken();
+    this.semanticAnalyser.insertTable(this.token, SymbolTableType.PROCEDURE);
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
       this.readToken();
       if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
         this.blockAnalyserAlgorith();
       } else this.Error(ErrorType.MISSING_POINT_COMMA);
     } else this.Error(ErrorType.MISSING_IDENTIFIER);
+    this.semanticAnalyser.popScope();
     console.log('Saiu procedureDeclarationAnalyserAlgorith', this.token);
     console.groupEnd();
   }
@@ -325,16 +365,24 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     this.readToken();
+    const functionToken = this.token;
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
       this.readToken();
       if (this.compareToken(SymbolsType.DOISPONTOS)) {
         this.readToken();
-        this.typeAnalyserAlgorith();
+        const type = this.typeAnalyserAlgorith();
+        this.semanticAnalyser.insertTable(
+          functionToken,
+          this.getSymbolTableFunctionType(type),
+          type
+        );
         if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
           this.blockAnalyserAlgorith();
         } else this.Error(ErrorType.MISSING_POINT_COMMA);
       } else this.Error(ErrorType.MISSING_DOUBLE_POINT);
     } else this.Error(ErrorType.MISSING_IDENTIFIER);
+
+    this.semanticAnalyser.popScope();
     console.log('Saiu functionDeclarationAnalyserAlgorith', this.token);
     console.groupEnd();
   }
@@ -344,7 +392,7 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     this.simpleExpressionAnalyserAlgorith();
-    if (
+    while (
       this.compareToken([
         SymbolsType.MAIOR,
         SymbolsType.MAIORIGUAL,
@@ -400,6 +448,11 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+      this.semanticAnalyser.searchTable(this.token, [
+        SymbolTableType.VARIABLE,
+        SymbolTableType.FUNCTION_INTEGER,
+        SymbolTableType.FUNCTION_BOOLEAN,
+      ]);
       this.functionCallAnalyser();
     } else if (this.compareToken(SymbolsType.DIGITO)) {
       this.readToken();
