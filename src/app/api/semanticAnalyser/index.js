@@ -9,6 +9,7 @@ export default class SemanticAnalyser {
   constructor() {
     this.symbolTable = [];
     this.scopeTable = [];
+    this.actualScope = 0;
 
     this.expression = [];
     this.expressionStack = [];
@@ -19,6 +20,13 @@ export default class SemanticAnalyser {
 
   precedenceTable = [
     { lexema: ')', level: 8 },
+    {
+      lexema: '-unao',
+      level: 7,
+      operators: 1,
+      type: PrecedenceTableType.BOOLEAN,
+      return: PrecedenceTableType.BOOLEAN,
+    },
     {
       lexema: '-u',
       level: 7,
@@ -129,8 +137,10 @@ export default class SemanticAnalyser {
 
   Error = (reason, token) => {
     const error = new Error(reason);
-    error.line = token.line;
-    error.token = token;
+    if (token) {
+      error.line = token.line;
+      error.token = token;
+    }
     error.reason = reason;
     error.type = 'semantico';
 
@@ -146,7 +156,7 @@ export default class SemanticAnalyser {
       },
       type: "variavel",
       declarationType: "",
-      scope: ['a', 'b'],
+      scope: 0,
       label: "",
     }
   */
@@ -185,17 +195,23 @@ export default class SemanticAnalyser {
     return true;
   };
 
-  checkDuplicate(token) {
-    const findItem = this.symbolTable.find(
-      (item) => item.token.lexema === token.lexema
-    );
+  checkDuplicate(token, type) {
+    const findItem = this.symbolTable
+      .slice()
+      .reverse()
+      .find((item) => item.token.lexema === token.lexema);
 
     if (!findItem) return true;
 
-    if (!this.checkScope(this.scopeTable, findItem.scope))
-      return this.Error(ErrorType.DUPLICATED, token);
+    if (
+      findItem.scope !== this.actualScope &&
+      this.compareIdentifierType(type, SymbolTableType.VARIABLE)
+    ) {
+      if (this.compareIdentifierType(findItem.type, SymbolTableType.VARIABLE))
+        return true;
+    }
 
-    return true;
+    return this.Error(ErrorType.DUPLICATED, token);
   }
 
   updateSymbolTableVariableType(index, type) {
@@ -207,13 +223,14 @@ export default class SemanticAnalyser {
     console.log(token, type, declarationType);
     console.log('Symbol Table', this.symbolTable);
     console.log('Scope Table', this.scopeTable);
-    this.checkDuplicate(token);
+
+    this.checkDuplicate(token, type);
 
     this.symbolTable.push({
       token,
       type,
       declarationType,
-      scope: [...this.scopeTable],
+      scope: this.actualScope,
       label,
     });
 
@@ -224,7 +241,8 @@ export default class SemanticAnalyser {
         SymbolTableType.PROCEDURE,
       ])
     ) {
-      this.scopeTable.push(token.lexema);
+      this.actualScope += 1;
+      this.scopeTable.push(token);
     }
 
     console.groupEnd();
@@ -232,11 +250,28 @@ export default class SemanticAnalyser {
     return this.symbolTable.length === 0 ? 0 : this.symbolTable.length - 1;
   }
 
+  popScope() {
+    this.symbolTable = this.symbolTable.filter(
+      (symbol) => symbol.scope < this.actualScope
+    );
+
+    this.actualScope -= 1;
+    return this.scopeTable.pop();
+  }
+
   searchTable(token, type) {
     console.log('Search Table', token, type);
-    const findItem = this.symbolTable.find(
-      (item) => item.token.lexema === token.lexema
-    );
+    console.log('SymbolTable', this.symbolTable.slice().reverse());
+    const findItem = this.symbolTable
+      .slice()
+      .reverse()
+      .find(
+        (item) =>
+          item.token.lexema === token.lexema &&
+          this.compareIdentifierType(item.type, type)
+      );
+
+    console.log('Found Item', findItem);
 
     const throwError = () => {
       if (typeof type === 'object') {
@@ -247,28 +282,21 @@ export default class SemanticAnalyser {
           SymbolTableType.FUNCTION_INTEGER,
         ])
       ) {
-        this.Error(ErrorType.UNDECLARED_FUNC);
+        this.Error(ErrorType.UNDECLARED_FUNC, token);
       } else if (this.compareIdentifierType(type, SymbolTableType.PROCEDURE)) {
-        this.Error(ErrorType.UNDECLARED_PROC);
+        this.Error(ErrorType.UNDECLARED_PROC, token);
       } else if (this.compareIdentifierType(type, SymbolTableType.VARIABLE)) {
-        this.Error(ErrorType.UNDECLARED_VAR);
+        this.Error(ErrorType.UNDECLARED_VAR, token);
       }
     };
 
     if (!findItem) throwError();
 
-    if (!this.compareIdentifierType(findItem.type, type)) throwError();
-
-    if (this.checkScope(this.scopeTable, findItem.scope)) throwError();
-
     return findItem;
   }
 
-  popScope() {
-    return this.scopeTable.pop();
-  }
-
   insertExpression(lexema, type) {
+    const expressionItem = { lexema, type };
     if (
       this.compareIdentifierType(type, [
         SymbolsType.IDENTIFICADOR,
@@ -277,16 +305,22 @@ export default class SemanticAnalyser {
         SymbolsType.FALSO,
       ])
     ) {
-      this.expression.push(lexema);
+      if (this.compareIdentifierType(type, SymbolsType.IDENTIFICADOR)) {
+        expressionItem.symbol = this.symbolTable
+          .slice()
+          .reverse()
+          .find((item) => item.token.lexema === lexema);
+      }
+      this.expression.push(expressionItem);
     } else if (this.compareIdentifierType(type, SymbolsType.ABREPARENTESES)) {
       this.expressionLevel += 1;
-      this.expressionStack.push(lexema);
+      this.expressionStack.push(expressionItem);
     } else if (this.compareIdentifierType(type, SymbolsType.FECHAPARENTESES)) {
       let stackItem = null;
       do {
         stackItem = this.expressionStack.pop();
-        if (stackItem !== '(') this.expression.push(stackItem);
-      } while (stackItem !== '(');
+        if (stackItem.lexema !== '(') this.expression.push(stackItem);
+      } while (stackItem.lexema !== '(');
       this.expressionLevel -= 1;
     } else {
       const operatorItem = this.precedenceTable.find(
@@ -297,7 +331,7 @@ export default class SemanticAnalyser {
           ? this.precedenceTable.find(
               (item) =>
                 item.lexema ===
-                this.expressionStack[this.expressionStack.length - 1]
+                this.expressionStack[this.expressionStack.length - 1].lexema
             )
           : null;
 
@@ -307,12 +341,12 @@ export default class SemanticAnalyser {
         !stackOperatorItem ||
         (stackOperatorItem && stackOperatorItem.lexema === '(')
       ) {
-        this.expressionStack.push(lexema);
+        this.expressionStack.push(expressionItem);
       } else if (operatorItem.level <= stackOperatorItem.level) {
         this.expression.push(this.expressionStack.pop());
-        this.expressionStack.push(lexema);
+        this.expressionStack.push(expressionItem);
       } else {
-        this.expressionStack.push(lexema);
+        this.expressionStack.push(expressionItem);
       }
     }
     console.group('insertExpression');
@@ -322,19 +356,148 @@ export default class SemanticAnalyser {
     console.groupEnd();
   }
 
-  verifyExpressionEnd() {
-    if (this.expressionLevel !== 0) return;
+  validateOperationType(type, item, token) {
+    if (!item) this.Error(ErrorType.INVALID_EXPRESSION_OPERATION, token);
+    console.log(type, item, token);
+    if (type === PrecedenceTableType.BOOLEAN) {
+      if (
+        this.compareIdentifierType(item, [
+          PrecedenceTableType.INTEGER,
+          PrecedenceTableType.BOOLEAN,
+        ])
+      ) {
+        if (item === PrecedenceTableType.INTEGER)
+          this.Error(ErrorType.INVALID_EXPRESSION, token);
+      } else {
+        if (this.compareIdentifierType(item.type, SymbolsType.DIGITO))
+          this.Error(ErrorType.INVALID_EXPRESSION, token);
 
-    if (this.expressionStack.length > 0) {
-      for (let i = 0; i < this.expressionStack.length; i += 1) {
-        this.expression.push(this.expressionStack.pop());
+        if (this.compareIdentifierType(item.type, SymbolsType.IDENTIFICADOR)) {
+          if (item.symbol.declarationType !== PrecedenceTableType.BOOLEAN)
+            this.Error(ErrorType.INVALID_EXPRESSION, token);
+        }
+      }
+    } else if (type === PrecedenceTableType.INTEGER) {
+      if (
+        this.compareIdentifierType(item, [
+          PrecedenceTableType.INTEGER,
+          PrecedenceTableType.BOOLEAN,
+        ])
+      ) {
+        if (item === PrecedenceTableType.BOOLEAN)
+          this.Error(ErrorType.INVALID_EXPRESSION, token);
+      } else {
+        if (
+          this.compareIdentifierType(item.type, [
+            SymbolsType.VERDADEIRO,
+            SymbolsType.FALSO,
+          ])
+        )
+          this.Error(ErrorType.INVALID_EXPRESSION, token);
+
+        if (this.compareIdentifierType(item.type, SymbolsType.IDENTIFICADOR)) {
+          if (item.symbol.declarationType !== PrecedenceTableType.INTEGER)
+            this.Error(ErrorType.INVALID_EXPRESSION, token);
+        }
+      }
+    }
+  }
+
+  verifyExpressionEnd(returnType, line) {
+    if (!returnType || this.expressionLevel !== 0) return;
+
+    console.log(this.expressionStack.slice(), this.expressionStack.length);
+
+    while (this.expressionStack.length > 0) {
+      this.expression.push(this.expressionStack.pop());
+    }
+
+    const saveExpression = this.expression.slice();
+
+    console.group('Expression End');
+    console.log('returnType', returnType);
+    console.log('line', line);
+    console.log('this.expression', this.expression.slice());
+    console.log('saveExpression', saveExpression);
+    console.log('this.expressionStack', this.expressionStack.slice());
+    console.log('this.expressionLevel', this.expressionLevel);
+    console.groupEnd();
+
+    if (this.expression.length === 1) {
+      this.validateOperationType(returnType, this.expression[0], {
+        expression: saveExpression,
+        line,
+      });
+      this.expression[0] = returnType;
+    } else if (this.expression.length > 1) {
+      let i;
+      let { length } = this.expression;
+      for (i = 0; i < length; i += 1) {
+        const expressionItem = this.expression[i];
+        if (
+          !this.compareIdentifierType(expressionItem.type, [
+            SymbolsType.IDENTIFICADOR,
+            SymbolsType.DIGITO,
+            SymbolsType.VERDADEIRO,
+            SymbolsType.FALSO,
+          ])
+        ) {
+          const operatorItem = this.precedenceTable.find(
+            (item) => item.lexema === expressionItem.lexema
+          );
+
+          if (operatorItem && operatorItem.operators === 1) {
+            this.validateOperationType(
+              operatorItem.type,
+              this.expression[i - 1],
+              {
+                expression: saveExpression,
+                line,
+              }
+            );
+          } else if (operatorItem && operatorItem.operators === 2) {
+            this.validateOperationType(
+              operatorItem.type,
+              this.expression[i - 2],
+              {
+                expression: saveExpression,
+                line,
+              }
+            );
+            this.validateOperationType(
+              operatorItem.type,
+              this.expression[i - 1],
+              {
+                expression: saveExpression,
+                line,
+              }
+            );
+          }
+
+          this.expression[i] = operatorItem.return;
+          this.expression.splice(
+            i - operatorItem.operators,
+            operatorItem.operators
+          );
+          i -= operatorItem.operators;
+          length -= operatorItem.operators;
+          console.log('New Expression', this.expression);
+        }
       }
     }
 
-    console.group('Expression End');
-    console.log('this.expression', this.expression);
-    console.log('this.expressionStack', this.expressionStack);
-    console.log('this.expressionLevel', this.expressionLevel);
+    if (this.expression.length !== 1 || returnType !== this.expression[0])
+      this.Error(ErrorType.INVALID_EXPRESSION_RETURN, {
+        expression: saveExpression,
+        line,
+      });
+
+    console.group('Expression End - Calculated');
+    console.log('returnType', returnType);
+    console.log('expression type', this.expression[0]);
+    console.log('line', line);
+    console.log('expression', this.expression);
+    console.log('save expression', saveExpression);
     console.groupEnd();
 
     this.expression = [];

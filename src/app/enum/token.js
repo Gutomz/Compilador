@@ -49,9 +49,9 @@ export const SymbolTableType = {
 };
 
 export const PrecedenceTableType = {
-  INTEGER: 'inteiro',
-  BOOLEAN: 'booleano',
-  BOTH: 'ambos',
+  INTEGER: 'sinteiro',
+  BOOLEAN: 'sbooleano',
+  BOTH: 'sambos',
 };
 
 export const ErrorType = {
@@ -82,4 +82,7 @@ export const ErrorType = {
   UNDECLARED_VAR: 'Variável não declarada',
   UNDECLARED_FUNC: 'Função não declarada',
   UNDECLARED_PROC: 'Procedimento não declarado',
+  INVALID_EXPRESSION: 'A expressão contem argumentos de tipos inválidos.',
+  INVALID_EXPRESSION_OPERATION: 'Expressão inválida',
+  INVALID_EXPRESSION_RETURN: 'Igualdade inválida.',
 };

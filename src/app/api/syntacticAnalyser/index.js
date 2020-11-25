@@ -1,6 +1,11 @@
 import LexicalAnalyser from '../lexicalAnalyser';
 import SemanticAnalyser from '../semanticAnalyser';
-import { ErrorType, SymbolsType, SymbolTableType } from '../../enum/token';
+import {
+  ErrorType,
+  PrecedenceTableType,
+  SymbolsType,
+  SymbolTableType,
+} from '../../enum/token';
 
 export default class SyntacticAnalyser {
   constructor(file) {
@@ -204,11 +209,13 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
-      this.semanticAnalyser.searchTable(this.token, [
+      const item = this.semanticAnalyser.searchTable(this.token, [
         SymbolTableType.VARIABLE,
         SymbolTableType.PROCEDURE,
+        SymbolTableType.FUNCTION_BOOLEAN,
+        SymbolTableType.FUNCTION_INTEGER,
       ]);
-      this.procedureAssignmentCallAnalyser();
+      this.procedureAssignmentCallAnalyser(item.declarationType);
     } else if (this.compareToken(SymbolsType.SE)) {
       this.ifAnalyseAlgorith();
     } else if (this.compareToken(SymbolsType.ENQUANTO)) {
@@ -218,20 +225,23 @@ export default class SyntacticAnalyser {
     } else if (this.compareToken(SymbolsType.ESCREVA)) {
       this.writeAnalyseAlgorith();
     } else {
-      this.commandAnalyserAlgorith();
+      this.readToken();
+      if (this.compareToken(SymbolsType.INICIO)) {
+        this.commandAnalyserAlgorith();
+      } else this.simpleCommandAnalyser();
     }
     console.log('Saiu simpleCommandAnalyser', this.token);
     console.groupEnd();
   }
 
-  procedureAssignmentCallAnalyser() {
+  procedureAssignmentCallAnalyser(returnType) {
     console.group('Entrou procedureAssignmentCallAnalyser');
     console.log(this.token);
 
     this.readToken();
     if (this.compareToken(SymbolsType.ATRIBUICAO)) {
       this.readToken();
-      this.expressionAnalyserAlgorith();
+      this.expressionAnalyserAlgorith(returnType, this.token.line);
     } else if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
       // this.procedureCallAnalyser();
     } else this.Error(ErrorType.INVALID_OPERATION);
@@ -298,7 +308,10 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     this.readToken();
-    this.expressionAnalyserAlgorith();
+    this.expressionAnalyserAlgorith(
+      PrecedenceTableType.BOOLEAN,
+      this.token.line
+    );
     if (this.compareToken(SymbolsType.FACA)) {
       this.readToken();
       this.simpleCommandAnalyser();
@@ -312,7 +325,10 @@ export default class SyntacticAnalyser {
     console.log(this.token);
 
     this.readToken();
-    this.expressionAnalyserAlgorith();
+    this.expressionAnalyserAlgorith(
+      PrecedenceTableType.BOOLEAN,
+      this.token.line
+    );
     if (this.compareToken(SymbolsType.ENTAO)) {
       this.readToken();
       this.simpleCommandAnalyser();
@@ -387,7 +403,7 @@ export default class SyntacticAnalyser {
     console.groupEnd();
   }
 
-  expressionAnalyserAlgorith() {
+  expressionAnalyserAlgorith(returnType, line) {
     console.group('Entrou expressionAnalyserAlgorith');
     console.log(this.token);
 
@@ -410,7 +426,7 @@ export default class SyntacticAnalyser {
       this.simpleExpressionAnalyserAlgorith();
     }
 
-    this.semanticAnalyser.verifyExpressionEnd();
+    this.semanticAnalyser.verifyExpressionEnd(returnType, line);
 
     console.log('Saiu expressionAnalyserAlgorith', this.token);
     console.groupEnd();
@@ -484,7 +500,7 @@ export default class SyntacticAnalyser {
       insertExpression();
       this.readToken();
     } else if (this.compareToken(SymbolsType.NAO)) {
-      insertExpression();
+      this.semanticAnalyser.insertExpression('-unao', this.token.simbolo);
       this.readToken();
       this.factorAnalyserAlgorith();
     } else if (this.compareToken(SymbolsType.ABREPARENTESES)) {
