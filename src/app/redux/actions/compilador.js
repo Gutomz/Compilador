@@ -27,6 +27,7 @@ export const init = (file) => (dispatch) => {
     message.success('Finalizou com sucesso');
   } catch (err) {
     console.group('Erro');
+    console.log(err);
     console.log('Motivo: ', err.reason);
     console.log('Linha: ', err.line);
 
@@ -49,7 +50,9 @@ export const init = (file) => (dispatch) => {
       error.text = `${err.reason}`;
     } else if (err.type === 'semantico') {
       console.log('Token com Erro: ', err.token);
-      error.text = `${err.reason} - (${err.token.lexema})`;
+      error.text = `${err.reason}${
+        err.token.lexema ? ` - (${err.token.lexema})` : ''
+      }`;
     }
     console.groupEnd();
 
