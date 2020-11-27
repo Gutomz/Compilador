@@ -352,7 +352,10 @@ export default class LexicalAnalyser {
     } else if (caractere.charCodeAt(0) === 10) {
       this.line += 1;
       this.index += 1;
+    } else if (caractere.charCodeAt(0) === 9) {
+      this.index += 1;
     } else {
+      console.log(caractere.charCodeAt(0));
       error = {
         caractere,
         index,

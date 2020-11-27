@@ -62,11 +62,11 @@ export default class SyntacticAnalyser {
     return false;
   }
 
-  Error(reason) {
+  Error(reason, token) {
     const error = new Error(reason);
-    error.line = this.line;
+    error.line = token ? token.line : this.line;
     error.reason = reason;
-    error.token = this.token;
+    error.token = token || this.token;
     error.lastToken = this.lastToken;
     error.type = 'sintatico';
 
@@ -99,15 +99,16 @@ export default class SyntacticAnalyser {
     } else this.Error(ErrorType.MISSING_PROGRAM);
   }
 
-  blockAnalyserAlgorith() {
+  blockAnalyserAlgorith(scopeFunction) {
     console.group('Entrou blockAnalyserAlgorith');
     console.log(this.token);
     this.readToken();
     this.variableAnalyserAlgorithET();
     this.subroutinesAnalyserAlgorith();
-    this.commandAnalyserAlgorith();
+    const hasReturn = this.commandAnalyserAlgorith(scopeFunction);
     console.log('Saiu blockAnalyserAlgorith', this.token);
     console.groupEnd();
+    return hasReturn;
   }
 
   variableAnalyserAlgorithET() {
@@ -179,20 +180,25 @@ export default class SyntacticAnalyser {
     return output;
   }
 
-  commandAnalyserAlgorith() {
+  commandAnalyserAlgorith(scopeFunction) {
     console.group('Entrou commandAnalyserAlgorith');
     console.log(this.token);
+
+    let hasReturn = false;
 
     if (this.compareToken(SymbolsType.INICIO)) {
       this.readToken();
 
       if (!this.compareToken(SymbolsType.FIM)) {
-        this.simpleCommandAnalyser();
+        hasReturn = this.simpleCommandAnalyser(scopeFunction);
         while (!this.compareToken(SymbolsType.FIM)) {
           if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
             this.readToken();
             if (!this.compareToken(SymbolsType.FIM)) {
-              this.simpleCommandAnalyser();
+              if (!hasReturn)
+                hasReturn = this.simpleCommandAnalyser(scopeFunction);
+              else if (scopeFunction)
+                this.Error(ErrorType.UNREACHED_CODE, this.token);
             }
           } else this.Error(ErrorType.MISSING_POINT_COMMA);
         }
@@ -202,55 +208,80 @@ export default class SyntacticAnalyser {
     } else this.Error(ErrorType.MISSING_INIT);
     console.log('Saiu commandAnalyserAlgorith', this.token);
     console.groupEnd();
+
+    return hasReturn;
   }
 
-  simpleCommandAnalyser() {
+  simpleCommandAnalyser(scopeFunction) {
     console.group('Entrou simpleCommandAnalyser');
     console.log(this.token);
 
+    let hasReturn = false;
+
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
-      const item = this.semanticAnalyser.searchTable(this.token, [
-        SymbolTableType.VARIABLE,
-        SymbolTableType.PROCEDURE,
-        SymbolTableType.FUNCTION_BOOLEAN,
-        SymbolTableType.FUNCTION_INTEGER,
-      ]);
-      this.procedureAssignmentCallAnalyser(item.declarationType);
+      hasReturn = this.procedureAssignmentCallAnalyser(scopeFunction);
     } else if (this.compareToken(SymbolsType.SE)) {
-      this.ifAnalyseAlgorith();
+      hasReturn = this.ifAnalyseAlgorith(scopeFunction);
     } else if (this.compareToken(SymbolsType.ENQUANTO)) {
-      this.whileAnalyserAlgorith();
+      hasReturn = this.whileAnalyserAlgorith(scopeFunction);
     } else if (this.compareToken(SymbolsType.LEIA)) {
       this.readAnalyserAlgorith();
     } else if (this.compareToken(SymbolsType.ESCREVA)) {
       this.writeAnalyseAlgorith();
     } else {
-      this.readToken();
-      if (this.compareToken(SymbolsType.INICIO)) {
-        this.commandAnalyserAlgorith();
-      } else this.simpleCommandAnalyser();
+      hasReturn = this.commandAnalyserAlgorith(scopeFunction);
     }
     console.log('Saiu simpleCommandAnalyser', this.token);
     console.groupEnd();
+
+    return hasReturn;
   }
 
-  procedureAssignmentCallAnalyser(returnType) {
+  procedureAssignmentCallAnalyser(scopeFunction) {
     console.group('Entrou procedureAssignmentCallAnalyser');
     console.log(this.token);
 
+    let hasReturn = false;
+    const item = this.semanticAnalyser.searchTable(this.token, [
+      SymbolTableType.VARIABLE,
+      SymbolTableType.PROCEDURE,
+      SymbolTableType.FUNCTION_BOOLEAN,
+      SymbolTableType.FUNCTION_INTEGER,
+    ]);
+    const { token } = this;
+
+    if (!item) this.Error(ErrorType.UNDECLARED);
+
+    // if (item.type === SymbolTableType.PROCEDURE) {
+    //   this.procedureCallAnalyser();
+    // }
+
     this.readToken();
-    if (this.compareToken(SymbolsType.ATRIBUICAO)) {
-      this.readToken();
-      this.expressionAnalyserAlgorith(returnType, this.token.line);
-    } else if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
-      // this.procedureCallAnalyser();
-    } else this.Error(ErrorType.INVALID_OPERATION);
+    if (
+      this.semanticAnalyser.compareIdentifierType(item.type, [
+        SymbolTableType.VARIABLE,
+        SymbolTableType.FUNCTION_BOOLEAN,
+        SymbolTableType.FUNCTION_INTEGER,
+      ])
+    ) {
+      if (this.compareToken(SymbolsType.ATRIBUICAO)) {
+        this.readToken();
+        hasReturn = this.expressionAnalyserAlgorith(
+          item.declarationType,
+          token,
+          scopeFunction
+        );
+      } else this.Error(ErrorType.MISSING_ASSIGNMENT);
+    }
+
     console.log('Saiu procedureAssignmentCallAnalyser', this.token);
     console.groupEnd();
+
+    return hasReturn;
   }
 
   // procedureCallAnalyser() {
-  //   /* Analisador semântico */
+
   // }
 
   functionCallAnalyser() {
@@ -303,42 +334,68 @@ export default class SyntacticAnalyser {
     console.groupEnd();
   }
 
-  whileAnalyserAlgorith() {
+  whileAnalyserAlgorith(scopeFunction) {
     console.group('Entrou whileAnalyserAlgorith');
     console.log(this.token);
 
+    let hasReturn = false;
+
     this.readToken();
-    this.expressionAnalyserAlgorith(
-      PrecedenceTableType.BOOLEAN,
-      this.token.line
-    );
+    this.expressionAnalyserAlgorith(PrecedenceTableType.BOOLEAN, {
+      line: this.line,
+    });
     if (this.compareToken(SymbolsType.FACA)) {
       this.readToken();
-      this.simpleCommandAnalyser();
+      hasReturn = this.simpleCommandAnalyser(scopeFunction);
     } else this.Error(ErrorType.MISSING_DO);
     console.log('Saiu whileAnalyserAlgorith', this.token);
     console.groupEnd();
+
+    return hasReturn;
   }
 
-  ifAnalyseAlgorith() {
+  ifAnalyseAlgorith(scopeFunction) {
     console.group('Entrou ifAnalyseAlgorith');
     console.log(this.token);
 
+    let hasThenReturn = false;
+    let hasElseReturn = false;
+    let hasElse = false;
+
     this.readToken();
-    this.expressionAnalyserAlgorith(
-      PrecedenceTableType.BOOLEAN,
-      this.token.line
-    );
+    this.expressionAnalyserAlgorith(PrecedenceTableType.BOOLEAN, {
+      line: this.line,
+    });
     if (this.compareToken(SymbolsType.ENTAO)) {
       this.readToken();
-      this.simpleCommandAnalyser();
+      hasThenReturn = this.simpleCommandAnalyser(scopeFunction);
       if (this.compareToken(SymbolsType.SENAO)) {
         this.readToken();
-        this.simpleCommandAnalyser();
+        hasElse = true;
+        hasElseReturn = this.simpleCommandAnalyser(scopeFunction);
       }
     } else this.Error(ErrorType.MISSING_THEN);
+
+    console.log('hasThenReturn', hasThenReturn);
+    console.log('hasElseReturn', hasElseReturn);
+    console.log(
+      'Return IF',
+      scopeFunction &&
+        hasElse &&
+        !(
+          (!hasThenReturn && !hasElseReturn) ||
+          (hasThenReturn && hasElseReturn)
+        )
+    );
+
     console.log('Saiu ifAnalyseAlgorith', this.token);
     console.groupEnd();
+
+    if (scopeFunction && hasElse && hasThenReturn && !hasElseReturn)
+      this.functionScopeError = () =>
+        this.Error(ErrorType.MISSING_WAY_RETURN, scopeFunction.token);
+
+    return hasThenReturn && hasElseReturn;
   }
 
   subroutinesAnalyserAlgorith() {
@@ -382,28 +439,40 @@ export default class SyntacticAnalyser {
 
     this.readToken();
     const functionToken = this.token;
+
+    let hasReturn = false;
+
     if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
       this.readToken();
       if (this.compareToken(SymbolsType.DOISPONTOS)) {
         this.readToken();
         const type = this.typeAnalyserAlgorith();
-        this.semanticAnalyser.insertTable(
-          functionToken,
-          this.getSymbolTableFunctionType(type),
-          type
-        );
+        const scopeFunction = this.semanticAnalyser.symbolTable[
+          this.semanticAnalyser.insertTable(
+            functionToken,
+            this.getSymbolTableFunctionType(type),
+            type
+          )
+        ];
         if (this.compareToken(SymbolsType.PONTOVIRGULA)) {
-          this.blockAnalyserAlgorith();
+          this.functionScopeError = null;
+          hasReturn = this.blockAnalyserAlgorith(scopeFunction);
         } else this.Error(ErrorType.MISSING_POINT_COMMA);
       } else this.Error(ErrorType.MISSING_DOUBLE_POINT);
     } else this.Error(ErrorType.MISSING_IDENTIFIER);
+
+    if (!hasReturn) {
+      if (this.functionScopeError) this.functionScopeError();
+
+      this.Error(ErrorType.MISSING_RETURN, functionToken);
+    }
 
     this.semanticAnalyser.popScope();
     console.log('Saiu functionDeclarationAnalyserAlgorith', this.token);
     console.groupEnd();
   }
 
-  expressionAnalyserAlgorith(returnType, line) {
+  expressionAnalyserAlgorith(returnType, token, scopeFunction) {
     console.group('Entrou expressionAnalyserAlgorith');
     console.log(this.token);
 
@@ -426,10 +495,41 @@ export default class SyntacticAnalyser {
       this.simpleExpressionAnalyserAlgorith();
     }
 
-    this.semanticAnalyser.verifyExpressionEnd(returnType, line);
+    const response = this.semanticAnalyser.verifyExpressionEnd(
+      returnType,
+      token
+    );
+
+    console.log('response', response);
+    console.log('scopeFunction', scopeFunction);
+    console.log('token.lexema', token && token.lexema);
+    console.log(
+      'scopeFunction.token.lexema',
+      scopeFunction && scopeFunction.token.lexema
+    );
+    console.log('response.token.lexema', response && response.token.lexema);
+    console.log(
+      'scopeFunction.token.lexema === response.token.lexema',
+      response &&
+        scopeFunction &&
+        token &&
+        token.lexema &&
+        scopeFunction.token.lexema === response.token.lexema
+    );
 
     console.log('Saiu expressionAnalyserAlgorith', this.token);
     console.groupEnd();
+
+    if (
+      response &&
+      scopeFunction &&
+      token &&
+      token.lexema &&
+      scopeFunction.token.lexema === response.token.lexema
+    ) {
+      return true;
+    }
+    return false;
   }
 
   simpleExpressionAnalyserAlgorith() {

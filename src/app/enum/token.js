@@ -69,7 +69,8 @@ export const ErrorType = {
   MISSING_OPEN_PARENTHESES: 'Está faltando abrir o parenteses',
   MISSING_CLOSE_PARENTHESES: 'Está faltando fechar o parenteses',
   MISSING_DOUBLE_POINT: 'Está faltando dois pontos',
-  MISSING_INIT: 'Está faltando a palavra reservada inicio',
+  MISSING_INIT: 'Comando inválido',
+  MISSING_ASSIGNMENT: 'Comando inválido',
   MISSING_THEN: 'Está faltando a palavra reservada entao',
   MISSING_DO: 'Está faltando a palavra reservada faca',
   INVALID_TYPE: 'Tipo de variável indefinido',
@@ -85,4 +86,7 @@ export const ErrorType = {
   INVALID_EXPRESSION: 'A expressão contem argumentos de tipos inválidos.',
   INVALID_EXPRESSION_OPERATION: 'Expressão inválida',
   INVALID_EXPRESSION_RETURN: 'Igualdade inválida.',
+  MISSING_RETURN: 'Função sem retorno!',
+  MISSING_WAY_RETURN: 'Todos os caminhos da função devem conter retorno.',
+  UNREACHED_CODE: 'Código inalcançável!',
 };

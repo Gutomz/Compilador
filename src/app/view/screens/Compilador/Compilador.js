@@ -35,7 +35,7 @@ class Compilador extends React.PureComponent {
 
       return this.setState({ file: data.file }, () => {
         saveFileData(data);
-        init(data.file);
+        if (data.file !== '' || data.file.trim() !== '') init(data.file);
       });
     });
   }
@@ -56,12 +56,16 @@ class Compilador extends React.PureComponent {
 
       saveFileData(data);
 
-      init(file);
+      console.log(data);
 
-      return notification.success({
-        message: 'Arquivo salvo!',
-        placement: 'topRight',
-      });
+      if (data.file !== '' || data.file.trim() !== '') init(file);
+
+      return null;
+
+      // return notification.success({
+      //   message: 'Arquivo salvo!',
+      //   placement: 'topRight',
+      // });
     };
 
     if (newFile) {

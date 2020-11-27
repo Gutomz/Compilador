@@ -183,18 +183,6 @@ export default class SemanticAnalyser {
     return false;
   };
 
-  checkScope = (actualScope, objectScope) => {
-    if (actualScope.length >= objectScope.length) {
-      for (let i = 0; i < objectScope.length; i += 1) {
-        if (actualScope[i] !== objectScope[i]) return true;
-      }
-
-      return false;
-    }
-
-    return true;
-  };
-
   checkDuplicate(token, type) {
     const findItem = this.symbolTable
       .slice()
@@ -326,6 +314,9 @@ export default class SemanticAnalyser {
       const operatorItem = this.precedenceTable.find(
         (item) => item.lexema === lexema
       );
+
+      if (!operatorItem) return;
+
       const stackOperatorItem =
         this.expressionStack.length > 0
           ? this.precedenceTable.find(
@@ -335,11 +326,11 @@ export default class SemanticAnalyser {
             )
           : null;
 
-      if (!operatorItem) return;
-
       if (
         !stackOperatorItem ||
-        (stackOperatorItem && stackOperatorItem.lexema === '(')
+        (stackOperatorItem && stackOperatorItem.lexema === '(') ||
+        (stackOperatorItem.lexema === '-unao' &&
+          operatorItem.lexema === '-unao')
       ) {
         this.expressionStack.push(expressionItem);
       } else if (operatorItem.level <= stackOperatorItem.level) {
@@ -403,8 +394,24 @@ export default class SemanticAnalyser {
     }
   }
 
-  verifyExpressionEnd(returnType, line) {
-    if (!returnType || this.expressionLevel !== 0) return;
+  /*
+    0: {lexema: "b", type: "sidentificador", symbol: 
+      {
+        declarationType: "sinteiro"
+        label: undefined
+        scope: 0
+        token: {lexema: "b", simbolo: "sidentificador", line: 2}
+        type: "variavel"
+      }
+    }
+    1: {lexema: "10", type: "sdigito"}
+    2: {lexema: ">", type: "smaior"}
+  */
+
+  verifyExpressionEnd(returnType, token = {}) {
+    if (!returnType || this.expressionLevel !== 0) return null;
+
+    token.returnType = returnType;
 
     console.log(this.expressionStack.slice(), this.expressionStack.length);
 
@@ -416,7 +423,7 @@ export default class SemanticAnalyser {
 
     console.group('Expression End');
     console.log('returnType', returnType);
-    console.log('line', line);
+    console.log('token', token);
     console.log('this.expression', this.expression.slice());
     console.log('saveExpression', saveExpression);
     console.log('this.expressionStack', this.expressionStack.slice());
@@ -426,7 +433,7 @@ export default class SemanticAnalyser {
     if (this.expression.length === 1) {
       this.validateOperationType(returnType, this.expression[0], {
         expression: saveExpression,
-        line,
+        ...token,
       });
       this.expression[0] = returnType;
     } else if (this.expression.length > 1) {
@@ -452,7 +459,7 @@ export default class SemanticAnalyser {
               this.expression[i - 1],
               {
                 expression: saveExpression,
-                line,
+                ...token,
               }
             );
           } else if (operatorItem && operatorItem.operators === 2) {
@@ -461,7 +468,7 @@ export default class SemanticAnalyser {
               this.expression[i - 2],
               {
                 expression: saveExpression,
-                line,
+                ...token,
               }
             );
             this.validateOperationType(
@@ -469,7 +476,7 @@ export default class SemanticAnalyser {
               this.expression[i - 1],
               {
                 expression: saveExpression,
-                line,
+                ...token,
               }
             );
           }
@@ -489,13 +496,13 @@ export default class SemanticAnalyser {
     if (this.expression.length !== 1 || returnType !== this.expression[0])
       this.Error(ErrorType.INVALID_EXPRESSION_RETURN, {
         expression: saveExpression,
-        line,
+        ...token,
       });
 
     console.group('Expression End - Calculated');
     console.log('returnType', returnType);
     console.log('expression type', this.expression[0]);
-    console.log('line', line);
+    console.log('token', token);
     console.log('expression', this.expression);
     console.log('save expression', saveExpression);
     console.groupEnd();
@@ -503,5 +510,7 @@ export default class SemanticAnalyser {
     this.expression = [];
     this.expressionStack = [];
     this.expressionLevel = 0;
+
+    return { token, saveExpression };
   }
 }
