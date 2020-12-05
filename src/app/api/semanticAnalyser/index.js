@@ -14,6 +14,7 @@ export default class SemanticAnalyser {
     this.expression = [];
     this.expressionStack = [];
     this.expressionLevel = 0;
+    this.varStack = [];
 
     this.digits = /^\d+$/;
   }
@@ -26,6 +27,7 @@ export default class SemanticAnalyser {
       operators: 1,
       type: PrecedenceTableType.BOOLEAN,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'NEG',
     },
     {
       lexema: '-u',
@@ -33,6 +35,7 @@ export default class SemanticAnalyser {
       operators: 1,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.INTEGER,
+      code: 'INV',
     },
     {
       lexema: '+u',
@@ -42,18 +45,12 @@ export default class SemanticAnalyser {
       return: PrecedenceTableType.INTEGER,
     },
     {
-      lexema: 'nao',
-      level: 7,
-      operators: 1,
-      type: PrecedenceTableType.BOOLEAN,
-      return: PrecedenceTableType.BOOLEAN,
-    },
-    {
       lexema: '*',
       level: 6,
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.INTEGER,
+      code: 'MULT',
     },
     {
       lexema: 'div',
@@ -61,6 +58,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.INTEGER,
+      code: 'DIVI',
     },
     {
       lexema: '-',
@@ -68,6 +66,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.INTEGER,
+      code: 'SUB',
     },
     {
       lexema: '+',
@@ -75,6 +74,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.INTEGER,
+      code: 'ADD',
     },
     {
       lexema: '>',
@@ -82,6 +82,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'CMA',
     },
     {
       lexema: '>=',
@@ -89,6 +90,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'CMAQ',
     },
     {
       lexema: '<',
@@ -96,6 +98,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'CME',
     },
     {
       lexema: '<=',
@@ -103,6 +106,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.INTEGER,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'CMEQ',
     },
     {
       lexema: '=',
@@ -110,6 +114,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.BOTH,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'CEQ',
     },
     {
       lexema: '!=',
@@ -117,6 +122,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.BOTH,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'CDIF',
     },
     {
       lexema: 'e',
@@ -124,6 +130,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.BOOLEAN,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'AND',
     },
     {
       lexema: 'ou',
@@ -131,6 +138,7 @@ export default class SemanticAnalyser {
       operators: 2,
       type: PrecedenceTableType.BOOLEAN,
       return: PrecedenceTableType.BOOLEAN,
+      code: 'OR',
     },
     { lexema: '(', level: 0 },
   ];
@@ -214,15 +222,18 @@ export default class SemanticAnalyser {
 
     this.checkDuplicate(token, type);
 
-    this.symbolTable.push({
+    const item = {
       token,
       type,
       declarationType,
       scope: this.actualScope,
       label,
-    });
+    };
 
-    if (
+    if (this.compareIdentifierType(type, SymbolTableType.VARIABLE)) {
+      item.stackIndex = this.varStack.length + 1;
+      this.varStack.push(item);
+    } else if (
       this.compareIdentifierType(type, [
         SymbolTableType.FUNCTION_BOOLEAN,
         SymbolTableType.FUNCTION_INTEGER,
@@ -232,6 +243,8 @@ export default class SemanticAnalyser {
       this.actualScope += 1;
       this.scopeTable.push(token);
     }
+
+    this.symbolTable.push(item);
 
     console.groupEnd();
 
@@ -243,8 +256,17 @@ export default class SemanticAnalyser {
       (symbol) => symbol.scope < this.actualScope
     );
 
+    const { length } = this.varStack.filter(
+      (symbol) => symbol.scope === this.actualScope
+    );
+
+    this.varStack = this.varStack.filter(
+      (symbol) => symbol.scope < this.actualScope
+    );
+
     this.actualScope -= 1;
-    return this.scopeTable.pop();
+    this.scopeTable.pop();
+    return length;
   }
 
   searchTable(token, type) {
@@ -298,6 +320,17 @@ export default class SemanticAnalyser {
           .slice()
           .reverse()
           .find((item) => item.token.lexema === lexema);
+        if (
+          this.compareIdentifierType(
+            expressionItem.symbol.type,
+            SymbolTableType.VARIABLE
+          )
+        ) {
+          expressionItem.stackIndex = this.varStack.find(
+            (variable) =>
+              variable.token.lexema === expressionItem.symbol.token.lexema
+          )?.stackIndex;
+        }
       }
       this.expression.push(expressionItem);
     } else if (this.compareIdentifierType(type, SymbolsType.ABREPARENTESES)) {
@@ -316,6 +349,8 @@ export default class SemanticAnalyser {
       );
 
       if (!operatorItem) return;
+
+      expressionItem.code = operatorItem.code || undefined;
 
       const stackOperatorItem =
         this.expressionStack.length > 0
@@ -511,6 +546,6 @@ export default class SemanticAnalyser {
     this.expressionStack = [];
     this.expressionLevel = 0;
 
-    return { token, saveExpression };
+    return { token, expression: saveExpression };
   }
 }
