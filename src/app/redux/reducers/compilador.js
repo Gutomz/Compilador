@@ -3,6 +3,7 @@ import { CompiladorActions } from '../actions';
 const initialState = {
   file: null,
   annotations: [],
+  generatedCode: '',
 };
 
 export default function compilador(state = initialState, action) {
@@ -27,6 +28,11 @@ export default function compilador(state = initialState, action) {
         ...state,
         annotations: [],
       };
+    case CompiladorActions.ACTION_SAVE_GENERATED_CODE:
+      return {
+        ...state,
+        generatedCode: action.payload,
+      };
 
     default:
       return state;
@@ -36,3 +42,5 @@ export default function compilador(state = initialState, action) {
 export const getFile = (state) => state.compilador.file;
 
 export const getAnnotations = (state) => state.compilador.annotations;
+
+export const getGeneratedCode = (state) => state.compilador.generatedCode;

@@ -5,6 +5,7 @@ export const ACTION_SAVE_FILE = 'compiler:ACTION_SAVE_FILE';
 export const ACTION_SAVE_ANNOTATIONS = 'compiler:ACTION_SAVE_ANNOTATIONS';
 export const ACTION_ADD_ANNOTATIONS = 'compiler:ACTION_ADD_ANNOTATIONS';
 export const ACTION_CLEAR_ANNOTATIONS = 'compiler:ACTION_CLEAR_ANNOTATIONS';
+export const ACTION_SAVE_GENERATED_CODE = 'compiler:ACTION_SAVE_GENERATED_CODE';
 
 export const saveFile = (file) => ({
   type: ACTION_SAVE_FILE,
@@ -22,9 +23,12 @@ export const init = (file) => (dispatch) => {
     dispatch({ type: ACTION_CLEAR_ANNOTATIONS });
     const syntacticAnalyser = new SyntacticAnalyser(file);
 
-    syntacticAnalyser.init();
+    const generatedCode = syntacticAnalyser.init();
+
+    dispatch({ type: ACTION_SAVE_GENERATED_CODE, generatedCode });
 
     message.success('Finalizou com sucesso');
+    return generatedCode;
   } catch (err) {
     console.group('Erro');
     console.log(err);
@@ -56,6 +60,6 @@ export const init = (file) => (dispatch) => {
     }
     console.groupEnd();
 
-    dispatch(saveAnnotations([error]));
+    return dispatch(saveAnnotations([error]));
   }
 };
