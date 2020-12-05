@@ -4,6 +4,8 @@ const initialState = {
   file: [],
   instructionPointer: 0,
   dataPointer: 0,
+  programStack: [],
+  dataStack: [],
 };
 
 export default function vm(state = initialState, action) {
@@ -20,3 +22,15 @@ export default function vm(state = initialState, action) {
 }
 
 export const getFile = (state) => state.vm && state.vm.file;
+
+export const getInstructionPointer = (state) =>
+  state.vm && state.vm.instructionPointer;
+
+export const getDataPointer = (state) => state.vm && state.vm.dataPointer;
+
+export const getProgramStack = (state) => state.vm && state.vm.programStack;
+
+export const getDataStack = (state) => state.vm && state.vm.dataStack;
+
+export const getDataStackByPosition = (state, i) =>
+  state.vm && state.vm.dataStack[i];

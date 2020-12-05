@@ -81,6 +81,8 @@ class Compilador extends React.PureComponent {
   }
 
   onSelectMenuOption({ key }) {
+    const { history } = this.props;
+
     switch (key) {
       case 'open':
         this.onLoadFilePress();
@@ -93,6 +95,9 @@ class Compilador extends React.PureComponent {
         break;
       case 'new':
         this.onNewPress();
+        break;
+      case 'run':
+        history.push('/vm');
         break;
       default:
         break;
@@ -139,6 +144,7 @@ class Compilador extends React.PureComponent {
             </Menu.Item>
             <Menu.Item key="saveAs">Salvar Como</Menu.Item>
           </SubMenu>
+          <Menu.Item key="run">Executar</Menu.Item>
         </Menu>
         <AceEditor
           mode="plain_text"
