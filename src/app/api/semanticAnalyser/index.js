@@ -326,10 +326,13 @@ export default class SemanticAnalyser {
             SymbolTableType.VARIABLE
           )
         ) {
-          expressionItem.stackIndex = this.varStack.find(
-            (variable) =>
-              variable.token.lexema === expressionItem.symbol.token.lexema
-          )?.stackIndex;
+          expressionItem.stackIndex = this.varStack
+            .slice()
+            .reverse()
+            .find(
+              (variable) =>
+                variable.token.lexema === expressionItem.symbol.token.lexema
+            )?.stackIndex;
         }
       }
       this.expression.push(expressionItem);
@@ -369,7 +372,15 @@ export default class SemanticAnalyser {
       ) {
         this.expressionStack.push(expressionItem);
       } else if (operatorItem.level <= stackOperatorItem.level) {
-        this.expression.push(this.expressionStack.pop());
+        if (stackOperatorItem.lexema === '-unao') {
+          while (
+            this.expressionStack[this.expressionStack.length - 1].lexema ===
+            '-unao'
+          )
+            this.expression.push(this.expressionStack.pop());
+        } else {
+          this.expression.push(this.expressionStack.pop());
+        }
         this.expressionStack.push(expressionItem);
       } else {
         this.expressionStack.push(expressionItem);

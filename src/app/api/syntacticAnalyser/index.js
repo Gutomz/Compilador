@@ -106,11 +106,13 @@ export default class SyntacticAnalyser {
             if (!this.eof)
               this.Error(ErrorType.MISSING_FINAL_ERROR_COMMENT_EOF);
             this.codeGeneration.insertCode('HLT');
-            console.log(this.codeGeneration.code);
-          } else this.Error(ErrorType.MISSING_PONT);
+            return this.codeGeneration.code;
+          }
+          this.Error(ErrorType.MISSING_PONT);
         } else this.Error(ErrorType.MISSING_POINT_COMMA);
       } else this.Error(ErrorType.MISSING_IDENTIFIER);
     } else this.Error(ErrorType.MISSING_PROGRAM);
+    return null;
   }
 
   blockAnalyserAlgorith(scopeFunction) {
@@ -129,14 +131,19 @@ export default class SyntacticAnalyser {
     console.group('Entrou variableAnalyserAlgorithET');
     console.log(this.token);
 
+    const stackLength = this.semanticAnalyser.varStack.length + 1;
+
     if (this.compareToken(SymbolsType.VAR)) {
       this.readToken();
       if (this.compareToken(SymbolsType.IDENTIFICADOR)) {
+        let varCount = 0;
         while (this.compareToken(SymbolsType.IDENTIFICADOR)) {
-          this.variableAnalyserAlgorith();
+          varCount += this.variableAnalyserAlgorith();
           if (this.compareToken(SymbolsType.PONTOVIRGULA)) this.readToken();
           else this.Error(ErrorType.MISSING_POINT_COMMA);
         }
+
+        this.codeGeneration.insertCode('ALLOC', stackLength, varCount);
       } else {
         this.Error(ErrorType.MISSING_IDENTIFIER);
       }
@@ -149,7 +156,6 @@ export default class SyntacticAnalyser {
     console.group('Entrou variableAnalyserAlgorith');
     console.log(this.token);
 
-    const stackLength = this.semanticAnalyser.varStack.length + 1;
     const variableDeclarationTable = [];
 
     do {
@@ -177,14 +183,10 @@ export default class SyntacticAnalyser {
       this.semanticAnalyser.updateSymbolTableVariableType(index, type);
     });
 
-    this.codeGeneration.insertCode(
-      'ALLOC',
-      stackLength,
-      variableDeclarationTable.length
-    );
-
     console.log('Saiu variableAnalyserAlgorith', this.token);
     console.groupEnd();
+
+    return variableDeclarationTable.length;
   }
 
   typeAnalyserAlgorith() {
@@ -305,7 +307,7 @@ export default class SyntacticAnalyser {
             (x) => x.scope === this.semanticAnalyser.actualScope
           ).length;
           const initialScopeVarLength =
-            this.semanticAnalyser.varStack.length - removeScopeVarLength;
+            this.semanticAnalyser.varStack.length - removeScopeVarLength + 1;
           if (removeScopeVarLength > 0)
             this.codeGeneration.insertCode(
               'DALLOC',
@@ -371,7 +373,7 @@ export default class SyntacticAnalyser {
           SymbolTableType.FUNCTION_INTEGER,
         ]);
         if (
-          this.compareToken(this.token, [
+          this.semanticAnalyser.compareIdentifierType(item.type, [
             SymbolTableType.FUNCTION_BOOLEAN,
             SymbolTableType.FUNCTION_INTEGER,
           ])
@@ -538,11 +540,13 @@ export default class SyntacticAnalyser {
     } else this.Error(ErrorType.MISSING_IDENTIFIER);
 
     const removeScopeVarLength = this.semanticAnalyser.popScope();
-    this.codeGeneration.insertCode(
-      'DALLOC',
-      initialScopeVarLength,
-      removeScopeVarLength
-    );
+    if (removeScopeVarLength > 0) {
+      this.codeGeneration.insertCode(
+        'DALLOC',
+        initialScopeVarLength,
+        removeScopeVarLength
+      );
+    }
     this.codeGeneration.insertCode('RETURN');
 
     console.log('Saiu procedureDeclarationAnalyserAlgorith', this.token);
@@ -629,6 +633,7 @@ export default class SyntacticAnalyser {
     );
 
     if (response && response.expression) {
+      console.log('Expressão aqui', response);
       response.expression.forEach((operator) => {
         if (
           this.semanticAnalyser.compareIdentifierType(
@@ -659,17 +664,15 @@ export default class SyntacticAnalyser {
             SymbolsType.FALSO
           )
         ) {
-          this.codeGeneration.insertCode('LDC', 0);
+          this.codeGeneration.insertCode('LDC', '0');
         } else if (
           this.semanticAnalyser.compareIdentifierType(
             operator.type,
             SymbolsType.VERDADEIRO
           )
         ) {
-          this.codeGeneration.insertCode('LDC', 1);
-        } else {
-          this.codeGeneration.insertCode(operator.code);
-        }
+          this.codeGeneration.insertCode('LDC', '1');
+        } else if (operator.code) this.codeGeneration.insertCode(operator.code);
       });
     }
 
