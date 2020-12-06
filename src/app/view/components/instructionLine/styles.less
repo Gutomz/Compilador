@@ -1,0 +1,35 @@
+.instruction-line {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid darken(@secondary-color, 5%);
+
+  &--active {
+    background-color: lighten(@secondary-color, 2%);
+  }
+
+  &__breakpoint {
+    height: 35px;
+    width: 35px;
+    background-color: transparent;
+    border: none;
+    border-right: 1px solid darken(@secondary-color, 5%);
+
+    &--active {
+      color: red;
+      background-color: darken(@secondary-color, 5%);
+    }
+
+    &:hover{
+      background-color: lighten(@secondary-color, 5%);
+    }
+  }
+
+  &__text {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  &__index {
+    margin: 0 25px;
+  }
+}

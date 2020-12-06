@@ -1,37 +1,17 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import {
-  Input,
-  Button,
-  Statistic,
-  notification,
-  Layout,
-  Row,
-  Col,
-  Menu,
-} from 'antd';
-import { ArrowLeft } from '@material-ui/icons';
-import { openFile } from '../../../Services/FileSystem';
+import { Input, Layout, Menu } from 'antd';
+import { SendOutlined } from '@material-ui/icons';
 import { VMSelectors } from '../../../redux/reducers';
 import { VMAction } from '../../../redux/actions';
+
+import InstructionLine from '../../components/instructionLine/InstructionLine';
+import StackItem from '../../components/stackItem/StackItem';
+import ConsoleItem from '../../components/consoleItem/ConsoleItem';
 
 const { Sider, Content, Footer } = Layout;
 
 class VM extends React.PureComponent {
-  onLoadFilePress = () => {
-    const { saveFile } = this.props;
-
-    openFile((err, data) => {
-      if (err) {
-        return notification.error({
-          message: err,
-          placement: 'topRight',
-        });
-      }
-      return saveFile(data.split('\n'));
-    });
-  };
-
   onSelectMenuOption({ key }) {
     const { history } = this.props;
 
@@ -45,82 +25,76 @@ class VM extends React.PureComponent {
   }
 
   render() {
-    const { file } = this.props;
-
     return (
-      <Layout>
+      <Layout className="vm">
         <Menu
           mode="horizontal"
           selectable={false}
           theme="dark"
           onClick={(e) => this.onSelectMenuOption(e)}
         >
-          <Menu.Item icon={<ArrowLeft />} key="goBack">
-            Voltar
-          </Menu.Item>
+          <Menu.Item key="goBack">Voltar</Menu.Item>
         </Menu>
-        <Layout>
-          <Content className="vm">
-            <Layout className="vm">
-              <Content className="vm__content">
-                <Row className="vm__content--inner">
-                  <Col
-                    span={12}
-                    className="vm__content--inner vm__content--inner--left"
-                  >
-                    <Col className="console custom-scrollbar">
-                      <p>Console</p>
-                    </Col>
-                  </Col>
-                  <Col
-                    span={12}
-                    className="vm__content--inner vm__content--inner--right"
-                  >
-                    <Col className="code custom-scrollbar">
-                      {file.map((line) => (
-                        <p className="code__text">{line}</p>
-                      ))}
-                    </Col>
-                  </Col>
-                </Row>
+        <Layout className="vm__content">
+          <Content className="vm__content__file">
+            <Layout className="vm__content__file__inner">
+              <Content className="vm__content__file__content vm__content__card custom-scrollbar">
+                <InstructionLine
+                  index="0"
+                  instruction="Teste"
+                  onBreakpointPress={(value) => console.log(value)}
+                  current={false}
+                />
               </Content>
-              <Footer className="vm__footer">
-                <Row align="middle">
-                  <Col span={12} className="vm__footer--inner--left">
-                    <Row>
-                      <Col flex={1}>
-                        <Input />
-                      </Col>
-                      <Button>RUN</Button>
-                      <Button>DEBUG</Button>
-                    </Row>
-                  </Col>
-                  <Col span={12} className="vm__footer--inner--right">
-                    <Row align="middle" justify="space-between">
-                      <Button onClick={() => this.onLoadFilePress()}>
-                        Carregar Arquivo
-                      </Button>
-                      <Col span={16}>
-                        <Row justify="space-between">
-                          <Statistic
-                            title="Registrador de Programa"
-                            value={0}
-                            precision={0}
-                          />
-                          <Statistic
-                            title="Topo da Pilha"
-                            value={0}
-                            precision={0}
-                          />
-                        </Row>
-                      </Col>
-                    </Row>
-                  </Col>
-                </Row>
+              <Footer className="vm__content__file__footer">
+                {/* <p>infos + buttons</p> */}
+                <div className="vm__content__file__footer__instructionPointer vm__content__card">
+                  <p>{`I: ${0}`}</p>
+                </div>
+                <div className="vm__content__file__footer__stackPointer vm__content__card">
+                  <p>{`S: ${0}`}</p>
+                </div>
+                <button
+                  className="vm__content__file__footer__button vm__content__card disable-outlines"
+                  type="button"
+                  onClick={() => console.log('Executar')}
+                >
+                  EXECUTAR
+                </button>
+                <button
+                  className="vm__content__file__footer__button vm__content__card disable-outlines"
+                  type="button"
+                  onClick={() => console.log('STEP')}
+                >
+                  STEP
+                </button>
               </Footer>
             </Layout>
           </Content>
-          <Sider className="vm__sider" />
+          <Content className="vm__content__console">
+            <Layout className="vm__content__console__inner">
+              <Content className="vm__content__console__content vm__content__card custom-scrollbar">
+                <ConsoleItem time="10:52" message="Teste de mensagem padrão" />
+              </Content>
+              <Footer className="vm__content__console__footer vm__content__card">
+                <Input
+                  className="vm__content__console__footer__input"
+                  bordered={false}
+                  onPressEnter={() => console.log('Send Input')}
+                />
+                <button
+                  className="vm__content__console__footer__icon disable-outlines"
+                  type="button"
+                  onClick={() => console.log('Send Input')}
+                >
+                  <SendOutlined />
+                </button>
+              </Footer>
+            </Layout>
+          </Content>
+          <Sider className="vm__content__stack vm__content__card custom-scrollbar">
+            <StackItem index="0" value="22" current={false} />
+          </Sider>
         </Layout>
       </Layout>
     );

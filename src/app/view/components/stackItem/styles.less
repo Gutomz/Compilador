@@ -1,0 +1,30 @@
+.stack-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-bottom: 1px solid darken(@secondary-color, 5%);
+
+  &--active {
+    background-color: lighten(@secondary-color, 2%);
+  }
+
+  &__text {
+    margin: 0;
+    font-size: 14px;
+    text-align: center;
+    margin: 0 auto;
+  }
+
+  &__index {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 35px;
+    width: 50px;
+    border-right: 1px solid darken(@secondary-color, 5%);
+
+    &__inner {
+      margin: 0;
+    }
+  }
+}

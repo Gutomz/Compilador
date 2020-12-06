@@ -27,6 +27,8 @@ export const init = (file) => (dispatch) => {
 
     dispatch({ type: ACTION_SAVE_GENERATED_CODE, generatedCode });
 
+    console.log(generatedCode);
+
     message.success('Finalizou com sucesso');
     return generatedCode;
   } catch (err) {
