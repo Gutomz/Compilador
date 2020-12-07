@@ -25,7 +25,7 @@ export const init = (file) => (dispatch) => {
 
     const generatedCode = syntacticAnalyser.init();
 
-    dispatch({ type: ACTION_SAVE_GENERATED_CODE, generatedCode });
+    dispatch({ type: ACTION_SAVE_GENERATED_CODE, payload: generatedCode });
 
     console.log(generatedCode);
 

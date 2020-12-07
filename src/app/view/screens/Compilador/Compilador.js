@@ -6,7 +6,7 @@ import 'ace-builds/src-noconflict/mode-plain_text';
 import 'ace-builds/src-noconflict/theme-dracula';
 
 import { saveFile, openFileAs, saveFileAs } from '../../../Services/FileSystem';
-import { CompiladorActions } from '../../../redux/actions';
+import { CompiladorActions, VMAction } from '../../../redux/actions';
 import { CompiladorSelectors } from '../../../redux/reducers';
 
 const { SubMenu } = Menu;
@@ -22,10 +22,18 @@ class Compilador extends React.PureComponent {
     this.handleKeyDown = this.handleKeyDown.bind(this);
   }
 
+  componentDidMount() {
+    const { fileData } = this.props;
+
+    if (fileData) {
+      this.setState({ file: fileData.file });
+    }
+  }
+
   onLoadFilePress() {
     const { saveFileData, init } = this.props;
 
-    openFileAs((err, data) => {
+    openFileAs([{ name: '.txt', extensions: ['txt'] }], (err, data) => {
       if (err) {
         return notification.error({
           message: err,
@@ -56,23 +64,50 @@ class Compilador extends React.PureComponent {
 
       saveFileData(data);
 
-      console.log(data);
-
       if (data.file !== '' || data.file.trim() !== '') init(file);
 
       return null;
-
-      // return notification.success({
-      //   message: 'Arquivo salvo!',
-      //   placement: 'topRight',
-      // });
     };
 
     if (newFile) {
-      return saveFileAs(file, cb);
+      return saveFileAs(file, [{ name: '.txt', extensions: ['txt'] }], cb);
     }
 
     return saveFile(fileData.path, file, cb);
+  }
+
+  onSaveAssemblyFilePress(newFile) {
+    const { generatedCode, fileData } = this.props;
+
+    console.log(fileData.path);
+
+    const cb = (err) => {
+      if (err) {
+        return notification.error({
+          message: err,
+          placement: 'topRight',
+        });
+      }
+
+      return notification.success({
+        message: 'Arquivo assembly salvo com sucesso!',
+        placement: 'topRight',
+      });
+    };
+
+    if (!newFile) {
+      return saveFile(
+        `${fileData.path}`.replace('.txt', '.asm'),
+        generatedCode,
+        cb
+      );
+    }
+
+    return saveFileAs(
+      generatedCode,
+      [{ name: '.asm', extensions: ['asm'] }],
+      cb
+    );
   }
 
   onNewPress() {
@@ -81,22 +116,39 @@ class Compilador extends React.PureComponent {
   }
 
   onSelectMenuOption({ key }) {
-    const { history } = this.props;
+    const {
+      history,
+      cleanGeneratedCode,
+      generatedCode,
+      saveGeneratedCodeToVM,
+    } = this.props;
 
     switch (key) {
       case 'open':
+        cleanGeneratedCode();
         this.onLoadFilePress();
         break;
       case 'save':
+        cleanGeneratedCode();
         this.onSaveFilePress();
         break;
       case 'saveAs':
+        cleanGeneratedCode();
         this.onSaveFilePress(true);
         break;
       case 'new':
+        cleanGeneratedCode();
         this.onNewPress();
         break;
-      case 'run':
+      case 'saveAssembly':
+        this.onSaveAssemblyFilePress();
+        break;
+      case 'saveAsAssembly':
+        this.onSaveAssemblyFilePress(true);
+        break;
+      case 'runAssembly':
+      case 'vm':
+        saveGeneratedCodeToVM(generatedCode);
         history.push('/vm');
         break;
       default:
@@ -121,7 +173,7 @@ class Compilador extends React.PureComponent {
   }
 
   render() {
-    const { fileData, annotations } = this.props;
+    const { fileData, annotations, generatedCode } = this.props;
     const { file } = this.state;
 
     return (
@@ -144,7 +196,12 @@ class Compilador extends React.PureComponent {
             </Menu.Item>
             <Menu.Item key="saveAs">Salvar Como</Menu.Item>
           </SubMenu>
-          <Menu.Item key="run">Executar</Menu.Item>
+          <SubMenu key="assembly" title="Assembly" disabled={!generatedCode}>
+            <Menu.Item key="saveAssembly">Salvar</Menu.Item>
+            <Menu.Item key="saveAsAssembly">Salvar Como</Menu.Item>
+            <Menu.Item key="runAssembly">Executar</Menu.Item>
+          </SubMenu>
+          <Menu.Item key="vm">Máquina Virtual</Menu.Item>
         </Menu>
         <AceEditor
           mode="plain_text"
@@ -182,11 +239,18 @@ class Compilador extends React.PureComponent {
 const mapStateToProps = (state) => ({
   fileData: CompiladorSelectors.getFile(state),
   annotations: CompiladorSelectors.getAnnotations(state),
+  generatedCode: CompiladorSelectors.getGeneratedCode(state),
 });
 
 const mapDispatchToProps = (dispatch) => ({
   saveFileData: (file) => dispatch(CompiladorActions.saveFile(file)),
   init: (file) => dispatch(CompiladorActions.init(file)),
+  cleanGeneratedCode: () =>
+    dispatch({
+      type: CompiladorActions.ACTION_SAVE_GENERATED_CODE,
+      payload: null,
+    }),
+  saveGeneratedCodeToVM: (data) => dispatch(VMAction.saveInitialCode(data)),
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Compilador);

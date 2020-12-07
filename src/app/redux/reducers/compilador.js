@@ -29,6 +29,7 @@ export default function compilador(state = initialState, action) {
         annotations: [],
       };
     case CompiladorActions.ACTION_SAVE_GENERATED_CODE:
+      console.log('Save code generation', action.payload);
       return {
         ...state,
         generatedCode: action.payload,

@@ -45,6 +45,7 @@
     "craco-less": "^1.17.0",
     "electron-is-dev": "^1.2.0",
     "less": "^3.12.2",
+    "moment-timezone": "^0.5.32",
     "node-sass": "^4.14.1",
     "react": "^16.13.1",
     "react-ace": "^9.2.0",

@@ -28,11 +28,11 @@ export const saveFile = async (path, data, cb) => {
   );
 };
 
-export const openFileAs = async (cb) => {
+export const openFileAs = async (filters = [], cb) => {
   const file = await dialog.showOpenDialog({
     title: 'Selecionar Arquivo',
     buttonLabel: 'Selecionar',
-    filters: [{ name: 'Arquivo Texto .txt', extensions: ['txt'] }],
+    filters,
   });
 
   if (file.canceled || !file.filePaths || file.filePaths.length === 0) {
@@ -43,11 +43,11 @@ export const openFileAs = async (cb) => {
   openFile(file.filePaths[0], cb);
 };
 
-export const saveFileAs = async (data, cb) => {
+export const saveFileAs = async (data, filters, cb) => {
   const file = await dialog.showSaveDialog({
     title: 'Salvar Como',
     buttonLabel: 'Salvar',
-    filters: [{ name: 'Arquivo Texto .txt', extensions: ['txt'] }],
+    filters,
   });
 
   if (file.canceled || !file.filePath) {
